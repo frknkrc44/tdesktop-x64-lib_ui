@@ -737,6 +737,7 @@ const AbstractBlock &Block::operator*() const {
 }
 
 void Block::destroy() {
+	if (get() == nullptr) return; // try to debug nullptr?
 	switch (get()->type()) {
 	case TextBlockTNewline:
 		unsafe<NewlineBlock>().~NewlineBlock();
