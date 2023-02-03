@@ -30,6 +30,13 @@ public:
 		Bottom,
 	};
 
+	enum class AnimatePhase {
+		Hidden,
+		StartShow,
+		Shown,
+		StartHide,
+	};
+
 	PopupMenu(QWidget *parent, const style::PopupMenu &st = st::defaultPopupMenu);
 	PopupMenu(QWidget *parent, QMenu *menu, const style::PopupMenu &st = st::defaultPopupMenu);
 	~PopupMenu();
@@ -39,6 +46,9 @@ public:
 	}
 	[[nodiscard]] QRect inner() const {
 		return _inner;
+	}
+	[[nodiscard]] rpl::producer<AnimatePhase> animatePhaseValue() const {
+		return _animatePhase.value();
 	}
 
 	not_null<QAction*> addAction(base::unique_qptr<Menu::ItemBase> widget);
@@ -72,6 +82,7 @@ public:
 	bool prepareGeometryFor(const QPoint &p);
 	void popupPrepared();
 	void hideMenu(bool fast = false);
+	void setTopShift(int topShift);
 	void setForceWidth(int forceWidth);
 	void setForcedOrigin(PanelAnimation::Origin origin);
 	void setForcedVerticalOrigin(VerticalOrigin origin);
@@ -195,6 +206,7 @@ private:
 	std::unique_ptr<PanelAnimation> _showAnimation;
 	Animations::Simple _a_show;
 	rpl::event_stream<ShowState> _showStateChanges;
+	rpl::variable<AnimatePhase> _animatePhase = AnimatePhase::Hidden;
 
 	bool _useTransparency = true;
 	bool _hiding = false;
@@ -207,6 +219,7 @@ private:
 	bool _reactivateParent = true;
 	bool _grabbingForPanelAnimation = false;
 
+	int _topShift = 0;
 	bool _clearLastSeparator = true;
 
 	Fn<void()> _destroyedCallback;

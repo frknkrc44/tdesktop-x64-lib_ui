@@ -440,6 +440,10 @@ void PopupMenu::clearActions() {
 	return _menu->clearActions();
 }
 
+void PopupMenu::setTopShift(int topShift) {
+	_topShift = topShift;
+}
+
 void PopupMenu::setForceWidth(int forceWidth) {
 	_menu->setForceWidth(forceWidth);
 }
@@ -484,7 +488,10 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
 		_showAnimation->paintFrame(p, 0, 0, width(), 1., 1.);
 		_showAnimation.reset();
 		_showStateChanges.fire({});
-		PostponeCall(this, [=] { showChildren(); });
+		PostponeCall(this, [=] {
+			showChildren();
+			_animatePhase = AnimatePhase::Shown;
+		});
 	} else {
 		paintBg(p);
 	}
@@ -750,6 +757,7 @@ void PopupMenu::hideFinished() {
 	_hiding = false;
 	_a_show.stop();
 	_cache = QPixmap();
+	_animatePhase = AnimatePhase::Hidden;
 	if (!isHidden()) {
 		hide();
 	}
@@ -790,6 +798,9 @@ void PopupMenu::startOpacityAnimation(bool hiding) {
 	_hiding = false;
 	prepareCache();
 	_hiding = hiding;
+	_animatePhase = hiding
+		? AnimatePhase::StartHide
+		: AnimatePhase::StartShow;
 	hideChildren();
 	_a_opacity.start(
 		[=] { opacityAnimationCallback(); },
@@ -832,6 +843,7 @@ void PopupMenu::startShowAnimation() {
 		}
 		_showAnimation->start();
 	}
+	_animatePhase = AnimatePhase::StartShow;
 	hideChildren();
 	_a_show.start([this] { showAnimationCallback(); }, 0., 1., _st.showDuration);
 	fireCurrentShowState();
@@ -858,6 +870,7 @@ void PopupMenu::opacityAnimationCallback() {
 			hideFinished();
 		} else {
 			showChildren();
+			_animatePhase = AnimatePhase::Shown;
 		}
 	}
 }
@@ -984,7 +997,7 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
 		std::max(
 			_additionalMenuPadding.left() - _st.shadow.extend.left(),
 			0),
-		_padding.top());
+		_padding.top() - _topShift);
 	auto r = screen ? screen->availableGeometry() : QRect();
 	const auto parentWidth = _parent ? _parent->inner().width() : 0;
 	if (style::RightToLeft()) {

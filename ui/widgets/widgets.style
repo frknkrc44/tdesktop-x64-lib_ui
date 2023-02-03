@@ -230,6 +230,7 @@ Menu {
 	itemFgShortcutOver: color;
 	itemFgShortcutDisabled: color;
 	itemPadding: margins;
+	itemRightSkip: pixels;
 	itemIconPosition: point;
 	itemStyle: TextStyle;
 	itemToggle: Toggle;
@@ -805,7 +806,7 @@ defaultPanelAnimation: PanelAnimation {
 	shadow: defaultRoundShadow;
 }
 
-defaultMenuArrow: icon {{ "dropdown_submenu_arrow", menuSubmenuArrowFg }};
+defaultMenuArrow: icon {{ "menu/submenu_arrow", windowBoldFg }};
 defaultMenuToggle: Toggle(defaultToggle) {
 	untoggledFg: menuIconFg;
 }
@@ -830,6 +831,7 @@ defaultMenu: Menu {
 	itemFgShortcutDisabled: menuFgDisabled;
 	itemIconPosition: point(0px, 0px);
 	itemPadding: margins(17px, 8px, 17px, 7px);
+	itemRightSkip: 6px;
 	itemStyle: defaultTextStyle;
 	itemToggle: defaultMenuToggle;
 	itemToggleOver: defaultMenuToggleOver;
@@ -932,7 +934,6 @@ defaultMultiSelectSearchField: InputField(defaultInputField) {
 	font: normalFont;
 }
 
-fieldSearchIcon: icon {{ "box_search", menuIconFg, point(9px, 8px) }};
 boxFieldSearchIcon: icon {{ "box_search", menuIconFg, point(10px, 9px) }};
 
 defaultMultiSelectSearchCancel: CrossButton {
@@ -980,7 +981,6 @@ defaultMultiSelect: MultiSelect {
 	fieldCancelSkip: 40px;
 }
 
-widgetSlideDuration: 200;
 widgetFadeDuration: 200;
 
 SettingsSlider {
@@ -1575,14 +1575,13 @@ sideBarButtonLockArcOffset: 2px;
 sideBarButtonLockSize: size(9px, 10px);
 sideBarButtonLockArcHeight: 3px;
 sideBarButtonLockBlockHeight: 5px;
-sideBarButtonLockLineHeight: 1px;
 sideBarButtonLockPenWidth: 3px;
 sideBarButtonLockPenWidthDivider: 2;
 
 menuIconColor: windowBoldFg;
 menuIconAttentionColor: attentionButtonFg;
 
-menuIconSubmenuArrow: icon {{ "menu/submenu_arrow", menuIconColor }};
+menuIconSubmenuArrow: defaultMenuArrow;
 
 menuWithIcons: Menu(defaultMenu) {
 	itemIconPosition: point(15px, 5px);
@@ -1603,4 +1602,8 @@ dropdownMenuWithIcons: DropdownMenu(defaultDropdownMenu) {
 		scrollPadding: margins(0px, 5px, 0px, 5px);
 	}
 	menu: menuWithIcons;
+}
+
+universalRippleAnimation: RippleAnimation(defaultRippleAnimation) {
+	color: shadowFg;
 }
