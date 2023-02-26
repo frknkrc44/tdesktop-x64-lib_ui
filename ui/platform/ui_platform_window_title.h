@@ -59,6 +59,7 @@ void SetupSemiNativeSystemButtons(
 
 enum class TitleControl {
 	Unknown,
+	OnTop,
 	Minimize,
 	Maximize,
 	Close,
@@ -73,6 +74,7 @@ public:
 	virtual void updateState(
 		bool active,
 		bool maximized,
+		bool topState,
 		const style::WindowTitle &st) = 0;
 	virtual void notifySynteticOver(TitleControl control, bool over) = 0;
 
@@ -88,11 +90,13 @@ public:
 	void updateState(
 		bool active,
 		bool maximized,
+		bool topState,
 		const style::WindowTitle &st) override;
 	void notifySynteticOver(TitleControl control, bool over) override {
 	}
 
 private:
+	QPointer<IconButton> _top;
 	QPointer<IconButton> _minimize;
 	QPointer<IconButton> _maximizeRestore;
 	QPointer<IconButton> _close;
@@ -110,7 +114,8 @@ public:
 		not_null<RpWidget*> parent,
 		const style::WindowTitle &st,
 		std::unique_ptr<AbstractTitleButtons> buttons,
-		Fn<void(bool maximized)> maximize = nullptr);
+		Fn<void(bool maximized)> maximize = nullptr,
+		bool hasOnTop = false);
 
 	void setStyle(const style::WindowTitle &st);
 	[[nodiscard]] not_null<const style::WindowTitle*> st() const;
@@ -124,7 +129,6 @@ public:
 	void buttonDown(HitTestResult testResult);
 
 	using Control = TitleControl;
-		OnTop,
 	struct Layout {
 		std::vector<Control> left;
 		std::vector<Control> right;

@@ -79,6 +79,8 @@ object_ptr<AbstractButton> IconTitleButtons::create(
 		return result;
 	};
 	switch (control) {
+	case TitleControl::OnTop:
+		return make(_top, st.top);
 	case TitleControl::Minimize:
 		return make(_minimize, st.minimize);
 	case TitleControl::Maximize:
@@ -92,6 +94,7 @@ object_ptr<AbstractButton> IconTitleButtons::create(
 void IconTitleButtons::updateState(
 		bool active,
 		bool maximized,
+		bool topState,
 		const style::WindowTitle &st) {
 	if (_minimize) {
 		const auto minimize = active
@@ -130,17 +133,28 @@ void IconTitleButtons::updateState(
 			: &st.close.iconOver;
 		_close->setIconOverride(close, closeOver);
 	}
+	if (_top) {
+		const auto top = active
+			? (topState ? &st.topIconActive : &st.top2IconActive)
+			: (topState ? &st.top.icon : &st.top2Icon);
+		const auto topOver = active
+			? (topState ? &st.topIconActiveOver : &st.top2IconActiveOver)
+			: (topState ? &st.top.iconOver : &st.top2IconOver);
+		_top->setIconOverride(top, topOver);
+	}
 }
 
 TitleControls::TitleControls(
 	not_null<RpWidget*> parent,
 	const style::WindowTitle &st,
-	Fn<void(bool maximized)> maximize)
+	Fn<void(bool maximized)> maximize,
+	bool hasOnTop)
 : TitleControls(
 	parent,
 	st,
 	std::make_unique<IconTitleButtons>(),
-	std::move(maximize)) {
+	std::move(maximize),
+	hasOnTop) {
 }
 
 TitleControls::TitleControls(
@@ -151,7 +165,7 @@ TitleControls::TitleControls(
 	bool hasOnTop)
 : _st(&st)
 , _buttons(std::move(buttons))
-, _top(parent, _st->top)
+, _top(_buttons->create(parent, Control::OnTop, st))
 , _minimize(_buttons->create(parent, Control::Minimize, st))
 , _maximizeRestore(_buttons->create(parent, Control::Maximize, st))
 , _close(_buttons->create(parent, Control::Close, st))
@@ -343,7 +357,7 @@ void TitleControls::buttonOver(HitTestResult testResult) {
 		_maximizeRestore,
 		HitTestResult::MaximizeRestore,
 		Control::Maximize);
-	update(_top, HitTestResult::OnTop);
+	update(_top, HitTestResult::OnTop, Control::OnTop);
 	update(_close, HitTestResult::Close, Control::Close);
 }
 
@@ -485,17 +499,7 @@ void TitleControls::handleWindowStateChanged(Qt::WindowState state) {
 }
 
 void TitleControls::updateButtonsState() {
-	_buttons->updateState(_activeState, _maximizedState, *_st);
-
-	if (_top) {
-		const auto top = _activeState
-			? (_topState ? &_st->topIconActive : &_st->top2IconActive)
-			: (_topState ? &_st->top.icon : &_st->top2Icon);
-		const auto topOver = _activeState
-			? (_topState ? &_st->topIconActiveOver : &_st->top2IconActiveOver)
-			: (_topState ? &_st->top.iconOver : &_st->top2IconOver);
-		_top->setIconOverride(top, topOver);
-	}
+	_buttons->updateState(_activeState, _maximizedState, _topState, *_st);
 }
 
 DefaultTitleWidget::DefaultTitleWidget(not_null<RpWidget*> parent)
