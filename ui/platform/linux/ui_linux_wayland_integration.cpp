@@ -7,40 +7,34 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/platform/linux/ui_linux_wayland_integration.h"
 
+#include "base/platform/linux/base_linux_wayland_utilities.h"
 #include "base/platform/base_platform_info.h"
 #include "base/qt_signal_producer.h"
 #include "qwayland-xdg-shell.h"
 
 #include <QtGui/QGuiApplication>
 #include <QtGui/QWindow>
+#include <qpa/qplatformnativeinterface.h>
 #include <qpa/qplatformwindow_p.h>
 #include <wayland-client.h>
 
 using namespace QNativeInterface;
 using namespace QNativeInterface::Private;
+using namespace base::Platform::Wayland;
 
 namespace Ui {
 namespace Platform {
-namespace {
-
-struct WlRegistryDeleter {
-	void operator()(wl_registry *value) {
-		wl_registry_destroy(value);
-	}
-};
-
-} // namespace
 
 struct WaylandIntegration::Private {
-	std::unique_ptr<wl_registry, WlRegistryDeleter> registry;
+	std::unique_ptr<wl_registry, RegistryDeleter> registry;
 	bool xdgDecorationSupported = false;
 	uint32_t xdgDecorationName = 0;
 	rpl::lifetime lifetime;
 
-	static const struct wl_registry_listener RegistryListener;
+	static const wl_registry_listener RegistryListener;
 };
 
-const struct wl_registry_listener WaylandIntegration::Private::RegistryListener = {
+const wl_registry_listener WaylandIntegration::Private::RegistryListener = {
 	decltype(wl_registry_listener::global)(+[](
 			Private *data,
 			wl_registry *registry,
@@ -81,14 +75,6 @@ WaylandIntegration::WaylandIntegration()
 		&Private::RegistryListener,
 		_private.get());
 
-	base::qt_signal_producer(
-		qApp,
-		&QObject::destroyed
-	) | rpl::start_with_next([=] {
-		// too late for standard destructors, just free
-		free(_private->registry.release());
-	}, _private->lifetime);
-
 	wl_display_roundtrip(display);
 }
 
@@ -96,8 +82,15 @@ WaylandIntegration::~WaylandIntegration() = default;
 
 WaylandIntegration *WaylandIntegration::Instance() {
 	if (!::Platform::IsWayland()) return nullptr;
-	static WaylandIntegration instance;
-	return &instance;
+	static std::optional<WaylandIntegration> instance(std::in_place);
+	base::qt_signal_producer(
+		QGuiApplication::platformNativeInterface(),
+		&QObject::destroyed
+	) | rpl::start_with_next([&] {
+		instance = std::nullopt;
+	}, instance->_private->lifetime);
+	if (!instance) return nullptr;
+	return &*instance;
 }
 
 bool WaylandIntegration::xdgDecorationSupported() {
