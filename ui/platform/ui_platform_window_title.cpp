@@ -558,6 +558,10 @@ void DefaultTitleWidget::mouseReleaseEvent(QMouseEvent *e) {
 void DefaultTitleWidget::mouseMoveEvent(QMouseEvent *e) {
 	if (_mousePressed) {
 		window()->windowHandle()->startSystemMove();
+		SendSynteticMouseEvent(
+			this,
+			QEvent::MouseButtonRelease,
+			Qt::LeftButton);
 	}
 }
 
