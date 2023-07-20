@@ -285,6 +285,7 @@ InputField {
 	border: pixels;
 	borderActive: pixels;
 	borderRadius: pixels;
+	borderDenominator: int;
 
 	font: font;
 	menu: PopupMenu;
@@ -370,6 +371,7 @@ RoundCheckbox {
 }
 
 RoundImageCheckbox {
+	selectExtendTwice: pixels;
 	imageRadius: pixels;
 	imageSmallRadius: pixels;
 	selectWidth: pixels;
@@ -709,6 +711,7 @@ defaultScrollArea: ScrollArea {
 	duration: 150;
 	hiding: 1000;
 }
+scrollBarMin: 40px;
 
 defaultSolidScroll: ScrollArea(defaultScrollArea) {
 	deltax: 5px;
@@ -886,6 +889,7 @@ defaultInputField: InputField {
 	border: 1px;
 	borderActive: 2px;
 	borderRadius: 0px;
+	borderDenominator: 1;
 
 	font: boxTextFont;
 	menu: defaultPopupMenu;
@@ -1069,6 +1073,7 @@ defaultPeerListCheck: RoundCheckbox(defaultRoundCheckbox) {
 	check: defaultPeerListCheckIcon;
 }
 defaultPeerListCheckbox: RoundImageCheckbox {
+	selectExtendTwice: 0px;
 	imageRadius: 21px;
 	imageSmallRadius: 18px;
 	selectWidth: 2px;
@@ -1277,23 +1282,6 @@ SearchFieldRow {
 	fieldIconSkip: pixels;
 	fieldCancel: CrossButton;
 	fieldCancelSkip: pixels;
-}
-
-InfoTopBar {
-	height: pixels;
-	back: IconButton;
-	title: FlatLabel;
-	titlePosition: point;
-	bg: color;
-	mediaCancel: IconButton;
-	mediaActionsSkip: pixels;
-	mediaForward: IconButton;
-	mediaDelete: IconButton;
-	search: IconButton;
-	searchRow: SearchFieldRow;
-	highlightBg: color;
-	highlightDuration: int;
-	radius: pixels;
 }
 
 LevelMeter {

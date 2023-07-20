@@ -6,6 +6,7 @@
 //
 #include "ui/platform/mac/ui_window_title_mac.h"
 
+#include "ui/platform/ui_platform_window_title.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/shadow.h"
 #include "ui/painter.h"
@@ -20,6 +21,19 @@
 
 namespace Ui {
 namespace Platform {
+namespace internal {
+
+TitleControls::Layout TitleControlsLayout() {
+	return TitleControls::Layout{
+		.left = {
+			TitleControls::Control::Close,
+			TitleControls::Control::Minimize,
+			TitleControls::Control::Maximize,
+		}
+	};
+}
+
+} // namespace internal
 
 TitleWidget::TitleWidget(not_null<RpWidget*> parent, int height)
 : RpWidget(parent)

@@ -68,12 +68,15 @@ WaylandIntegration::~WaylandIntegration() = default;
 WaylandIntegration *WaylandIntegration::Instance() {
 	if (!::Platform::IsWayland()) return nullptr;
 	static std::optional<WaylandIntegration> instance(std::in_place);
-	base::qt_signal_producer(
-		QGuiApplication::platformNativeInterface(),
-		&QObject::destroyed
-	) | rpl::start_with_next([&] {
-		instance = std::nullopt;
-	}, instance->_private->lifetime);
+	[[maybe_unused]] static const auto Inited = [] {
+		base::qt_signal_producer(
+			QGuiApplication::platformNativeInterface(),
+			&QObject::destroyed
+		) | rpl::start_with_next([] {
+			instance = std::nullopt;
+		}, instance->_private->lifetime);
+		return true;
+	}();
 	if (!instance) return nullptr;
 	return &*instance;
 }
@@ -92,9 +95,7 @@ void WaylandIntegration::setWindowExtents(
 		not_null<QWidget*> widget,
 		const QMargins &extents) {
 	const auto window = widget->windowHandle();
-	if (!window) {
-		return;
-	}
+	Expects(window != nullptr);
 
 	const auto native = window->nativeInterface<QWaylandWindow>();
 	if (!native) {
@@ -106,9 +107,7 @@ void WaylandIntegration::setWindowExtents(
 
 void WaylandIntegration::unsetWindowExtents(not_null<QWidget*> widget) {
 	const auto window = widget->windowHandle();
-	if (!window) {
-		return;
-	}
+	Expects(window != nullptr);
 
 	const auto native = window->nativeInterface<QWaylandWindow>();
 	if (!native) {
@@ -122,9 +121,7 @@ void WaylandIntegration::showWindowMenu(
 		not_null<QWidget*> widget,
 		const QPoint &point) {
 	const auto window = widget->windowHandle();
-	if (!window) {
-		return;
-	}
+	Expects(window != nullptr);
 
 	const auto native = qApp->nativeInterface<QWaylandApplication>();
 	const auto nativeWindow = window->nativeInterface<QWaylandWindow>();

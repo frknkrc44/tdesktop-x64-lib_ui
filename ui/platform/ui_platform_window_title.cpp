@@ -387,9 +387,9 @@ AbstractButton *TitleControls::controlWidget(Control control) const {
 }
 
 void TitleControls::updateControlsPosition() {
-	const auto controlsLayout = TitleControlsLayout();
-	auto controlsLeft = controlsLayout.left;
-	auto controlsRight = controlsLayout.right;
+	auto controlsLayout = TitleControlsLayout();
+	auto &controlsLeft = controlsLayout.left;
+	auto &controlsRight = controlsLayout.right;
 	const auto moveFromTo = [&](auto &from, auto &to) {
 		for (const auto control : from) {
 			if (!ranges::contains(to, control)) {
@@ -398,11 +398,7 @@ void TitleControls::updateControlsPosition() {
 		}
 		from.clear();
 	};
-	if (ranges::contains(controlsLeft, Control::Close)) {
-		moveFromTo(controlsRight, controlsLeft);
-	} else if (ranges::contains(controlsRight, Control::Close)) {
-		moveFromTo(controlsLeft, controlsRight);
-	} else if (controlsLeft.size() > controlsRight.size()) {
+	if (TitleControlsOnLeft(controlsLayout)) {
 		moveFromTo(controlsRight, controlsLeft);
 	} else {
 		moveFromTo(controlsLeft, controlsRight);
@@ -500,6 +496,36 @@ void TitleControls::handleWindowStateChanged(Qt::WindowState state) {
 
 void TitleControls::updateButtonsState() {
 	_buttons->updateState(_activeState, _maximizedState, _topState, *_st);
+}
+
+namespace internal {
+namespace {
+
+auto &CachedTitleControlsLayout() {
+	using Layout = TitleControls::Layout;
+	static rpl::variable<Layout> Result = TitleControlsLayout();
+	return Result;
+};
+
+} // namespace
+
+void NotifyTitleControlsLayoutChanged(
+		const std::optional<TitleControls::Layout> &layout) {
+	CachedTitleControlsLayout() = layout ? *layout : TitleControlsLayout();
+}
+
+} // namespace internal
+
+TitleControls::Layout TitleControlsLayout() {
+	return internal::CachedTitleControlsLayout().current();
+}
+
+rpl::producer<TitleControls::Layout> TitleControlsLayoutValue() {
+	return internal::CachedTitleControlsLayout().value();
+}
+
+rpl::producer<TitleControls::Layout> TitleControlsLayoutChanged() {
+	return internal::CachedTitleControlsLayout().changes();
 }
 
 DefaultTitleWidget::DefaultTitleWidget(not_null<RpWidget*> parent)

@@ -112,6 +112,8 @@ PRIVATE
     ui/platform/linux/ui_linux_wayland_integration.h
     ui/platform/linux/ui_window_linux.cpp
     ui/platform/linux/ui_window_linux.h
+    ui/platform/linux/ui_window_title_linux.cpp
+    ui/platform/linux/ui_window_title_linux.h
     ui/platform/linux/ui_utility_linux.cpp
     ui/platform/linux/ui_utility_linux.h
     ui/platform/mac/ui_window_mac.h
@@ -126,13 +128,14 @@ PRIVATE
     ui/platform/win/ui_window_title_win.h
     ui/platform/win/ui_window_win.cpp
     ui/platform/win/ui_window_win.h
+    ui/platform/win/ui_windows_direct_manipulation.cpp
+    ui/platform/win/ui_windows_direct_manipulation.h
     ui/platform/win/ui_utility_win.cpp
     ui/platform/win/ui_utility_win.h
     ui/platform/ui_platform_window_title.cpp
     ui/platform/ui_platform_window_title.h
     ui/platform/ui_platform_window.cpp
     ui/platform/ui_platform_window.h
-    ui/platform/ui_platform_utility.cpp
     ui/platform/ui_platform_utility.h
     ui/style/style_core.cpp
     ui/style/style_core.h
@@ -219,6 +222,8 @@ PRIVATE
     ui/widgets/menu/menu_separator.h
     ui/widgets/menu/menu_toggle.cpp
     ui/widgets/menu/menu_toggle.h
+    ui/widgets/elastic_scroll.cpp
+    ui/widgets/elastic_scroll.h
     ui/widgets/popup_menu.cpp
     ui/widgets/popup_menu.h
     ui/widgets/rp_window.cpp
@@ -292,6 +297,10 @@ PRIVATE
 
 if (NOT DESKTOP_APP_USE_PACKAGED_FONTS)
     nice_target_sources(lib_ui ${src_loc} PRIVATE fonts/fonts.qrc)
+endif()
+
+if (WIN32)
+    nuget_add_winrt(lib_ui)
 endif()
 
 if (DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
