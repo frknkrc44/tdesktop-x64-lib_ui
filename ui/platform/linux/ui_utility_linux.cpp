@@ -395,7 +395,6 @@ void ShowXCBWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 }
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
-	controlsRight.push_back(TitleControls::Control::OnTop);
 } // namespace
 
 bool IsApplicationActive() {
@@ -541,7 +540,6 @@ bool SkipApplicationDeactivateEvent() {
 
 void GotApplicationActivateEvent() {
 	PendingDeactivateEvent = false;
-			TitleControls::Control::OnTop,
 }
 
 } // namespace Platform
