@@ -338,7 +338,7 @@ HitTestResult TitleControls::hitTest(QPoint point, int padding) const {
 		return HitTestResult::MaximizeRestore;
 	} else if (test(_close)) {
 		return HitTestResult::Close;
-	} else if (test(_top, false)) {
+	} else if (test(_top)) {
 		return HitTestResult::OnTop;
 	}
 	return HitTestResult::None;
