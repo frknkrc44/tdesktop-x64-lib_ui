@@ -72,17 +72,11 @@ TitleControls::Layout TitleControlsLayout() {
 		}
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
-		using XDPSettingWatcher = base::Platform::XDP::SettingWatcher;
-		static const XDPSettingWatcher settingWatcher(
-			[=](
-				const Glib::ustring &group,
-				const Glib::ustring &key,
-				const Glib::VariantBase &value) {
-				if (group == "org.gnome.desktop.wm.preferences"
-					&& key == "button-layout") {
-					NotifyTitleControlsLayoutChanged();
-				}
-			});
+		namespace XDP = base::Platform::XDP;
+		static const XDP::SettingWatcher settingWatcher(
+			"org.gnome.desktop.wm.preferences",
+			"button-layout",
+			[] { NotifyTitleControlsLayoutChanged(); });
 
 		return true;
 	}();
@@ -109,24 +103,18 @@ TitleControls::Layout TitleControlsLayout() {
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
 	const auto portalResult = []() -> std::optional<TitleControls::Layout> {
-		try {
-			using namespace base::Platform::XDP;
+		namespace XDP = base::Platform::XDP;
 
-			const auto decorationLayout = ReadSetting(
-				"org.gnome.desktop.wm.preferences",
-				"button-layout");
+		const auto decorationLayout = XDP::ReadSetting<Glib::ustring>(
+			"org.gnome.desktop.wm.preferences",
+			"button-layout");
 
-			if (!decorationLayout.has_value()) {
-				return std::nullopt;
-			}
-
-			return GtkKeywordsToTitleControlsLayout(
-				QString::fromStdString(
-					decorationLayout->get_dynamic<Glib::ustring>()));
-		} catch (...) {
+		if (!decorationLayout.has_value()) {
+			return std::nullopt;
 		}
 
-		return std::nullopt;
+		return GtkKeywordsToTitleControlsLayout(
+			QString::fromStdString(*decorationLayout));
 	}();
 
 	if (portalResult.has_value()) {
