@@ -54,7 +54,7 @@ QFont ResolveFont(const QString &familyOverride, uint32 flags, int size) {
 		if (bold) {
 #ifdef LIB_UI_USE_PACKAGED_FONTS
 			result.setWeight(QFont::DemiBold);
-#else // LIB_UI_USE_PACKAGED_FONTS
+#endif // LIB_UI_USE_PACKAGED_FONTS
 			if (flags & FontBold) {
 				result.setBold(true);
 			}
