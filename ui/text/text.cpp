@@ -12,6 +12,7 @@
 #include "ui/text/text_parser.h"
 #include "ui/text/text_renderer.h"
 #include "ui/basic_click_handlers.h"
+#include "ui/integration.h"
 #include "ui/painter.h"
 #include "base/platform/base_platform_info.h"
 #include "styles/style_basic.h"
@@ -191,13 +192,13 @@ void ValidateQuotePaintCache(
 	const auto icon = st.icon.empty() ? nullptr : &st.icon;
 	if (!cache.corners.isNull()
 		&& cache.bgCached == cache.bg
-		&& cache.outlineCached == cache.outline
+		&& cache.outlines == cache.outlines
 		&& (!st.header || cache.headerCached == cache.header)
 		&& (!icon || cache.iconCached == cache.icon)) {
 		return;
 	}
 	cache.bgCached = cache.bg;
-	cache.outlineCached = cache.outline;
+	cache.outlinesCached = cache.outlines;
 	if (st.header) {
 		cache.headerCached = cache.header;
 	}
@@ -207,16 +208,51 @@ void ValidateQuotePaintCache(
 	const auto radius = st.radius;
 	const auto header = st.header;
 	const auto outline = st.outline;
-	const auto iconsize = icon
-		? std::max(
-			icon->width() + st.iconPosition.x(),
-			icon->height() + st.iconPosition.y())
+	const auto wiconsize = icon
+		? (icon->width() + st.iconPosition.x())
 		: 0;
-	const auto corner = std::max({ header, radius, outline, iconsize });
+	const auto hiconsize = icon
+		? (icon->height() + st.iconPosition.y())
+		: 0;
+	const auto wcorner = std::max({ radius, outline, wiconsize });
+	const auto hcorner = std::max({ header, radius, hiconsize });
 	const auto middle = st::lineWidth;
-	const auto side = 2 * corner + middle;
-	const auto full = QSize(side, side);
+	const auto wside = 2 * wcorner + middle;
+	const auto hside = 2 * hcorner + middle;
+	const auto full = QSize(wside, hside);
 	const auto ratio = style::DevicePixelRatio();
+
+	if (!cache.outlines[1].alpha()) {
+		cache.outline = QImage();
+	} else if (const auto outline = st.outline) {
+		const auto third = (cache.outlines[2].alpha() != 0);
+		const auto size = QSize(outline, outline * (third ? 6 : 4));
+		cache.outline = QImage(
+			size * ratio,
+			QImage::Format_ARGB32_Premultiplied);
+		cache.outline.fill(cache.outlines[0]);
+		cache.outline.setDevicePixelRatio(ratio);
+		auto p = QPainter(&cache.outline);
+		p.setCompositionMode(QPainter::CompositionMode_Source);
+		auto hq = PainterHighQualityEnabler(p);
+		auto path = QPainterPath();
+		path.moveTo(outline, outline);
+		path.lineTo(outline, outline * (third ? 4 : 3));
+		path.lineTo(0, outline * (third ? 5 : 4));
+		path.lineTo(0, outline * 2);
+		path.lineTo(outline, outline);
+		p.fillPath(path, cache.outlines[third ? 2 : 1]);
+		if (third) {
+			auto path = QPainterPath();
+			path.moveTo(outline, outline * 3);
+			path.lineTo(outline, outline * 5);
+			path.lineTo(0, outline * 6);
+			path.lineTo(0, outline * 4);
+			path.lineTo(outline, outline * 3);
+			p.fillPath(path, cache.outlines[1]);
+		}
+	}
+
 	auto image = QImage(full * ratio, QImage::Format_ARGB32_Premultiplied);
 	image.fill(Qt::transparent);
 	image.setDevicePixelRatio(ratio);
@@ -226,22 +262,32 @@ void ValidateQuotePaintCache(
 
 	if (header) {
 		p.setBrush(cache.header);
-		p.setClipRect(outline, 0, side - outline, header);
-		p.drawRoundedRect(0, 0, side, corner + radius, radius, radius);
+		p.setClipRect(outline, 0, wside - outline, header);
+		p.drawRoundedRect(0, 0, wside, hcorner + radius, radius, radius);
 	}
 	if (outline) {
-		p.setBrush(cache.outline);
-		p.setClipRect(0, 0, outline, side);
-		p.drawRoundedRect(0, 0, outline + radius * 2, side, radius, radius);
+		const auto rect = QRect(0, 0, outline + radius * 2, hside);
+		if (!cache.outline.isNull()) {
+			const auto shift = QPoint(0, st.outlineShift);
+			p.translate(shift);
+			p.setBrush(cache.outline);
+			p.setClipRect(QRect(-shift, QSize(outline, hside)));
+			p.drawRoundedRect(rect.translated(-shift), radius, radius);
+			p.translate(-shift);
+		} else {
+			p.setBrush(cache.outlines[0]);
+			p.setClipRect(0, 0, outline, hside);
+			p.drawRoundedRect(rect, radius, radius);
+		}
 	}
 	p.setBrush(cache.bg);
-	p.setClipRect(outline, header, side - outline, side - header);
-	p.drawRoundedRect(0, 0, side, side, radius, radius);
+	p.setClipRect(outline, header, wside - outline, hside - header);
+	p.drawRoundedRect(0, 0, wside, hside, radius, radius);
 	if (icon) {
 		p.setClipping(false);
-		const auto left = side - icon->width() - st.iconPosition.x();
+		const auto left = wside - icon->width() - st.iconPosition.x();
 		const auto top = st.iconPosition.y();
-		icon->paint(p, left, top, side, cache.icon);
+		icon->paint(p, left, top, wside, cache.icon);
 	}
 
 	p.end();
@@ -259,30 +305,31 @@ void FillQuotePaint(
 	const auto iwidth = image.width() / ratio;
 	const auto iheight = image.height() / ratio;
 	const auto imiddle = st::lineWidth;
-	const auto ihalf = (iheight - imiddle) / 2;
+	const auto whalf = (iwidth - imiddle) / 2;
+	const auto hhalf = (iheight - imiddle) / 2;
 	const auto x = rect.left();
 	const auto width = rect.width();
 	auto y = rect.top();
 	auto height = rect.height();
-	if (!parts.skipTop) {
-		const auto top = std::min(height, ihalf);
+	if (!parts.skippedTop) {
+		const auto top = std::min(height, hhalf);
 		p.drawImage(
-			QRect(x, y, ihalf, top),
+			QRect(x, y, whalf, top),
 			image,
-			QRect(0, 0, ihalf * ratio, top * ratio));
+			QRect(0, 0, whalf * ratio, top * ratio));
 		p.drawImage(
-			QRect(x + width - ihalf, y, ihalf, top),
+			QRect(x + width - whalf, y, whalf, top),
 			image,
-			QRect((iwidth - ihalf) * ratio, 0, ihalf * ratio, top * ratio));
-		if (const auto middle = width - 2 * ihalf) {
+			QRect((iwidth - whalf) * ratio, 0, whalf * ratio, top * ratio));
+		if (const auto middle = width - 2 * whalf) {
 			const auto header = st.header;
 			const auto fillHeader = std::min(header, top);
 			if (fillHeader) {
-				p.fillRect(x + ihalf, y, middle, fillHeader, cache.header);
+				p.fillRect(x + whalf, y, middle, fillHeader, cache.header);
 			}
 			if (const auto fillBody = top - fillHeader) {
 				p.fillRect(
-					QRect(x + ihalf, y + fillHeader, middle, fillBody),
+					QRect(x + whalf, y + fillHeader, middle, fillBody),
 					cache.bg);
 			}
 		}
@@ -293,32 +340,75 @@ void FillQuotePaint(
 		y += top;
 		rect.setTop(y);
 	}
+	const auto outline = st.outline;
 	if (!parts.skipBottom) {
-		const auto bottom = std::min(height, ihalf);
+		const auto bottom = std::min(height, hhalf);
+		const auto skip = !cache.outline.isNull() ? outline : 0;
 		p.drawImage(
-			QRect(x, y + height - bottom, ihalf, bottom),
+			QRect(x + skip, y + height - bottom, whalf - skip, bottom),
 			image,
 			QRect(
-				0,
+				skip * ratio,
 				(iheight - bottom) * ratio,
-				ihalf * ratio,
+				(whalf - skip) * ratio,
 				bottom * ratio));
 		p.drawImage(
 			QRect(
-				x + width - ihalf,
+				x + width - whalf,
 				y + height - bottom,
-				ihalf,
+				whalf,
 				bottom),
 			image,
 			QRect(
-				(iwidth - ihalf) * ratio,
+				(iwidth - whalf) * ratio,
 				(iheight - bottom) * ratio,
-				ihalf * ratio,
+				whalf * ratio,
 				bottom * ratio));
-		if (const auto middle = width - 2 * ihalf) {
+		if (const auto middle = width - 2 * whalf) {
 			p.fillRect(
-				QRect(x + ihalf, y + height - bottom, middle, bottom),
+				QRect(x + whalf, y + height - bottom, middle, bottom),
 				cache.bg);
+		}
+		if (skip) {
+			if (cache.bottomCorner.size() != QSize(skip, whalf)) {
+				cache.bottomCorner = QImage(
+					QSize(skip, hhalf) * ratio,
+					QImage::Format_ARGB32_Premultiplied);
+				cache.bottomCorner.setDevicePixelRatio(ratio);
+				cache.bottomCorner.fill(Qt::transparent);
+
+				cache.bottomRounding = QImage(
+					QSize(skip, hhalf) * ratio,
+					QImage::Format_ARGB32_Premultiplied);
+				cache.bottomRounding.setDevicePixelRatio(ratio);
+				cache.bottomRounding.fill(Qt::transparent);
+				const auto radius = st.radius;
+				auto q = QPainter(&cache.bottomRounding);
+				auto hq = PainterHighQualityEnabler(q);
+				q.setPen(Qt::NoPen);
+				q.setBrush(Qt::white);
+				q.drawRoundedRect(
+					0,
+					-2 * radius,
+					skip + 2 * radius,
+					hhalf + 2 * radius,
+					radius,
+					radius);
+			}
+			auto q = QPainter(&cache.bottomCorner);
+			const auto skipped = (height - bottom)
+				+ (parts.skippedTop ? int(parts.skippedTop) : hhalf)
+				- st.outlineShift;
+			q.translate(0, -skipped);
+			q.fillRect(0, skipped, skip, bottom, cache.outline);
+			q.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+			q.drawImage(0, skipped + bottom - hhalf, cache.bottomRounding);
+			q.end();
+
+			p.drawImage(
+				QRect(x, y + height - bottom, skip, bottom),
+				cache.bottomCorner,
+				QRect(0, 0, skip * ratio, bottom * ratio));
 		}
 		height -= bottom;
 		if (!height) {
@@ -326,9 +416,17 @@ void FillQuotePaint(
 		}
 		rect.setHeight(height);
 	}
-	const auto outline = st.outline;
 	if (outline) {
-		p.fillRect(x, y, outline, height, cache.outline);
+		if (!cache.outline.isNull()) {
+			const auto skipped = st.outlineShift
+				- (parts.skippedTop ? int(parts.skippedTop) : hhalf);
+			const auto top = y + skipped;
+			p.translate(x, top);
+			p.fillRect(0, -skipped, outline, height, cache.outline);
+			p.translate(-x, -top);
+		} else {
+			p.fillRect(x, y, outline, height, cache.outlines[0]);
+		}
 	}
 	p.fillRect(x + outline, y, width - outline, height, cache.bg);
 }
@@ -541,54 +639,15 @@ void String::recountNaturalSize(
 }
 
 int String::countMaxMonospaceWidth() const {
-	auto result = QFixed();
-	auto paragraphWidth = QFixed();
-	auto fullMonospace = true;
-	QFixed _width = 0, last_rBearing = 0, last_rPadding = 0;
-	for (auto &block : _blocks) {
-		auto b = block.get();
-		auto _btype = b->type();
-		if (_btype == TextBlockType::Newline) {
-			last_rBearing = b->f_rbearing();
-			last_rPadding = b->f_rpadding();
-
-			if (fullMonospace) {
-				accumulate_max(paragraphWidth, _width);
-				accumulate_max(result, paragraphWidth);
-				paragraphWidth = 0;
-			} else {
-				fullMonospace = true;
+	auto result = 0;
+	if (_extended) {
+		for (const auto &quote : _extended->quotes) {
+			if (quote.pre) {
+				accumulate_max(result, quote.maxWidth);
 			}
-			_width = (b->f_width() - last_rBearing);
-			continue;
 		}
-		if (!(b->flags() & (TextBlockFlag::Pre | TextBlockFlag::Code))
-			&& (b->type() != TextBlockType::Skip)) {
-			fullMonospace = false;
-		}
-		auto b__f_rbearing = b->f_rbearing(); // cache
-
-		// We need to accumulate max width after each block, because
-		// some blocks have width less than -1 * previous right bearing.
-		// In that cases the _width gets _smaller_ after moving to the next block.
-		//
-		// But when we layout block and we're sure that _maxWidth is enough
-		// for all the blocks to fit on their line we check each block, even the
-		// intermediate one with a large negative right bearing.
-		if (fullMonospace) {
-			accumulate_max(paragraphWidth, _width);
-		}
-		_width += last_rBearing + (last_rPadding + b->f_width() - b__f_rbearing);
-
-		last_rBearing = b__f_rbearing;
-		last_rPadding = b->f_rpadding();
-		continue;
 	}
-	if (_width > 0 && fullMonospace) {
-		accumulate_max(paragraphWidth, _width);
-		accumulate_max(result, paragraphWidth);
-	}
-	return result.ceil().toInt();
+	return result;
 }
 
 void String::setMarkedText(const style::TextStyle &st, const TextWithEntities &textWithEntities, const TextParseOptions &options, const std::any &context) {
@@ -1221,7 +1280,8 @@ int String::quoteMinWidth(QuoteDetails *quote) const {
 
 const QString &String::quoteHeaderText(QuoteDetails *quote) const {
 	static const auto kEmptyHeader = QString();
-	static const auto kDefaultHeader = u"code"_q;
+	static const auto kDefaultHeader
+		= Integration::Instance().phraseQuoteHeaderCopy();
 	return (!quote || !quote->pre)
 		? kEmptyHeader
 		: quote->language.isEmpty()

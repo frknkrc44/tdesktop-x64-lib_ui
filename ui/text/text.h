@@ -165,16 +165,22 @@ struct GeometryDescriptor {
 	bool elisionOneLine,
 	bool elisionBreakEverywhere);
 
+constexpr auto kMaxQuoteOutlines = 3;
+
 struct QuotePaintCache {
 	QImage corners;
+	QImage outline;
+	mutable QImage bottomCorner;
+	mutable QImage bottomRounding;
+
+	std::array<QColor, kMaxQuoteOutlines> outlinesCached;
 	QColor headerCached;
 	QColor bgCached;
-	QColor outlineCached;
 	QColor iconCached;
 
+	std::array<QColor, kMaxQuoteOutlines> outlines;
 	QColor header;
 	QColor bg;
-	QColor outline;
 	QColor icon;
 };
 
@@ -183,8 +189,8 @@ void ValidateQuotePaintCache(
 	const style::QuoteStyle &st);
 
 struct SkipBlockPaintParts {
-	bool skipTop : 1 = false;
-	bool skipBottom : 1 = false;
+	uint32 skippedTop : 31 = 0;
+	uint32 skipBottom : 1 = 0;
 };
 void FillQuotePaint(
 	QPainter &p,
