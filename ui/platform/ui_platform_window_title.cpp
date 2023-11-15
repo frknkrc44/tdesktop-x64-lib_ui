@@ -79,8 +79,6 @@ object_ptr<AbstractButton> IconTitleButtons::create(
 		return result;
 	};
 	switch (control) {
-	case TitleControl::OnTop:
-		return make(_top, st.top);
 	case TitleControl::Minimize:
 		return make(_minimize, st.minimize);
 	case TitleControl::Maximize:
@@ -94,7 +92,6 @@ object_ptr<AbstractButton> IconTitleButtons::create(
 void IconTitleButtons::updateState(
 		bool active,
 		bool maximized,
-		bool topState,
 		const style::WindowTitle &st) {
 	if (_minimize) {
 		const auto minimize = active
@@ -133,46 +130,32 @@ void IconTitleButtons::updateState(
 			: &st.close.iconOver;
 		_close->setIconOverride(close, closeOver);
 	}
-	if (_top) {
-		const auto top = active
-			? (topState ? &st.topIconActive : &st.top2IconActive)
-			: (topState ? &st.top.icon : &st.top2Icon);
-		const auto topOver = active
-			? (topState ? &st.topIconActiveOver : &st.top2IconActiveOver)
-			: (topState ? &st.top.iconOver : &st.top2IconOver);
-		_top->setIconOverride(top, topOver);
-	}
 }
 
 TitleControls::TitleControls(
 	not_null<RpWidget*> parent,
 	const style::WindowTitle &st,
-	Fn<void(bool maximized)> maximize,
-	bool hasOnTop)
+	Fn<void(bool maximized)> maximize)
 : TitleControls(
 	parent,
 	st,
 	std::make_unique<IconTitleButtons>(),
-	std::move(maximize),
-	hasOnTop) {
+	std::move(maximize)) {
 }
 
 TitleControls::TitleControls(
 	not_null<RpWidget*> parent,
 	const style::WindowTitle &st,
 	std::unique_ptr<AbstractTitleButtons> buttons,
-	Fn<void(bool maximized)> maximize,
-	bool hasOnTop)
+	Fn<void(bool maximized)> maximize)
 : _st(&st)
 , _buttons(std::move(buttons))
-, _top(_buttons->create(parent, Control::OnTop, st))
 , _minimize(_buttons->create(parent, Control::Minimize, st))
 , _maximizeRestore(_buttons->create(parent, Control::Maximize, st))
 , _close(_buttons->create(parent, Control::Close, st))
 , _maximizedState(parent->windowState()
 	& (Qt::WindowMaximized | Qt::WindowFullScreen))
-, _activeState(parent->isActiveWindow())
-, _hasOnTop(hasOnTop) {
+, _activeState(parent->isActiveWindow()) {
 	init(std::move(maximize));
 
 	_close->paintRequest(
@@ -201,7 +184,6 @@ QRect TitleControls::geometry() const {
 			result = result.united(control->geometry());
 		}
 	};
-	add(_top);
 	add(_minimize);
 	add(_maximizeRestore);
 	add(_close);
@@ -217,27 +199,6 @@ not_null<QWidget*> TitleControls::window() const {
 }
 
 void TitleControls::init(Fn<void(bool maximized)> maximize) {
-	if (_top) {
-		[[maybe_unused]] const auto flags = window()->windowFlags();
-		_top->setClickedCallback([=] {
-#ifdef Q_OS_LINUX
-			_topState = !_topState;
-			window()->setWindowFlag(Qt::WindowStaysOnTopHint, _topState);
-			window()->windowHandle()->destroy();
-			window()->windowHandle()->create();
-			window()->show();
-#else  // !Q_OS_LINUX
-			window()->setWindowFlags(_topState
-				? flags
-				: Qt::WindowStaysOnTopHint);
-			window()->show();
-			_topState = !_topState;
-#endif // !Q_OS_LINUX
-			updateButtonsState();
-		});
-		_top->setPointerCursor(false);
-	}
-
 	_minimize->setClickedCallback([=] {
 		const auto weak = MakeWeak(_minimize.data());
 		window()->setWindowState(
@@ -316,9 +277,6 @@ void TitleControls::raise() {
 	_minimize->raise();
 	_maximizeRestore->raise();
 	_close->raise();
-	if (_top) {
-		_top->raise();
-	}
 }
 
 HitTestResult TitleControls::hitTest(QPoint point, int padding) const {
@@ -338,8 +296,6 @@ HitTestResult TitleControls::hitTest(QPoint point, int padding) const {
 		return HitTestResult::MaximizeRestore;
 	} else if (test(_close)) {
 		return HitTestResult::Close;
-	} else if (test(_top)) {
-		return HitTestResult::OnTop;
 	}
 	return HitTestResult::None;
 }
@@ -360,7 +316,6 @@ void TitleControls::buttonOver(HitTestResult testResult) {
 		_maximizeRestore,
 		HitTestResult::MaximizeRestore,
 		Control::Maximize);
-	update(_top, HitTestResult::OnTop, Control::OnTop);
 	update(_close, HitTestResult::Close, Control::Close);
 }
 
@@ -375,7 +330,6 @@ void TitleControls::buttonDown(HitTestResult testResult) {
 	update(_minimize, HitTestResult::Minimize);
 	update(_maximizeRestore, HitTestResult::MaximizeRestore);
 	update(_close, HitTestResult::Close);
-	update(_top, HitTestResult::OnTop);
 }
 
 AbstractButton *TitleControls::controlWidget(Control control) const {
@@ -383,7 +337,6 @@ AbstractButton *TitleControls::controlWidget(Control control) const {
 	case Control::Minimize: return _minimize;
 	case Control::Maximize: return _maximizeRestore;
 	case Control::Close: return _close;
-	case Control::OnTop: return _top;
 	}
 
 	return nullptr;
@@ -426,10 +379,6 @@ void TitleControls::updateControlsPosition() {
 		eraseControl(Control::Maximize);
 	}
 
-	if (!_hasOnTop) {
-		eraseControl(Control::OnTop);
-	}
-
 	if (controlPresent(Control::Minimize)) {
 		_minimize->show();
 	} else {
@@ -446,12 +395,6 @@ void TitleControls::updateControlsPosition() {
 		_close->show();
 	} else {
 		_close->hide();
-	}
-
-	if (controlPresent(Control::OnTop)) {
-		_top->show();
-	} else {
-		_top->hide();
 	}
 
 	updateControlsPositionBySide(controlsLeft, false);
@@ -498,7 +441,7 @@ void TitleControls::handleWindowStateChanged(Qt::WindowState state) {
 }
 
 void TitleControls::updateButtonsState() {
-	_buttons->updateState(_activeState, _maximizedState, _topState, *_st);
+	_buttons->updateState(_activeState, _maximizedState, *_st);
 }
 
 namespace internal {
@@ -533,7 +476,7 @@ rpl::producer<TitleControls::Layout> TitleControlsLayoutChanged() {
 
 DefaultTitleWidget::DefaultTitleWidget(not_null<RpWidget*> parent)
 : RpWidget(parent)
-, _controls(this, st::defaultWindowTitle, nullptr, true)
+, _controls(this, st::defaultWindowTitle)
 , _shadow(this, st::titleShadow) {
 	setAttribute(Qt::WA_OpaquePaintEvent);
 }

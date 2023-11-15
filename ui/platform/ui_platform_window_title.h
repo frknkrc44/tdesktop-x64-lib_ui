@@ -1,4 +1,4 @@
-﻿// This file is part of Desktop App Toolkit,
+// This file is part of Desktop App Toolkit,
 // a set of libraries for developing nice desktop applications.
 //
 // For license and copyright information please follow this link:
@@ -42,7 +42,6 @@ enum class HitTestResult {
 	BottomLeft,
 	Left,
 	TopLeft,
-	OnTop,
 };
 
 struct HitTestRequest {
@@ -59,7 +58,6 @@ void SetupSemiNativeSystemButtons(
 
 enum class TitleControl {
 	Unknown,
-	OnTop,
 	Minimize,
 	Maximize,
 	Close,
@@ -74,7 +72,6 @@ public:
 	virtual void updateState(
 		bool active,
 		bool maximized,
-		bool topState,
 		const style::WindowTitle &st) = 0;
 	virtual void notifySynteticOver(TitleControl control, bool over) = 0;
 
@@ -90,13 +87,11 @@ public:
 	void updateState(
 		bool active,
 		bool maximized,
-		bool topState,
 		const style::WindowTitle &st) override;
 	void notifySynteticOver(TitleControl control, bool over) override {
 	}
 
 private:
-	QPointer<IconButton> _top;
 	QPointer<IconButton> _minimize;
 	QPointer<IconButton> _maximizeRestore;
 	QPointer<IconButton> _close;
@@ -108,14 +103,12 @@ public:
 	TitleControls(
 		not_null<RpWidget*> parent,
 		const style::WindowTitle &st,
-		Fn<void(bool maximized)> maximize = nullptr,
-		bool hasOnTop = false);
+		Fn<void(bool maximized)> maximize = nullptr);
 	TitleControls(
 		not_null<RpWidget*> parent,
 		const style::WindowTitle &st,
 		std::unique_ptr<AbstractTitleButtons> buttons,
-		Fn<void(bool maximized)> maximize = nullptr,
-		bool hasOnTop = false);
+		Fn<void(bool maximized)> maximize = nullptr);
 
 	void setStyle(const style::WindowTitle &st);
 	[[nodiscard]] not_null<const style::WindowTitle*> st() const;
@@ -151,17 +144,13 @@ private:
 	not_null<const style::WindowTitle*> _st;
 	const std::unique_ptr<AbstractTitleButtons> _buttons;
 
-	object_ptr<AbstractButton> _top;
 	object_ptr<AbstractButton> _minimize;
 	object_ptr<AbstractButton> _maximizeRestore;
 	object_ptr<AbstractButton> _close;
 
-	bool _topState = false;
 	bool _maximizedState = false;
 	bool _activeState = false;
 	bool _resizeEnabled = true;
-
-	const bool _hasOnTop;
 
 };
 

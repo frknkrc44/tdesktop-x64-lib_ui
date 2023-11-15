@@ -1,4 +1,4 @@
-﻿// This file is part of Desktop App Toolkit,
+// This file is part of Desktop App Toolkit,
 // a set of libraries for developing nice desktop applications.
 //
 // For license and copyright information please follow this link:
@@ -49,7 +49,6 @@ namespace internal {
 TitleControls::Layout TitleControlsLayout() {
 	return TitleControls::Layout{
 		.right = {
-			//TitleControls::Control::OnTop,
 			TitleControls::Control::Minimize,
 			TitleControls::Control::Maximize,
 			TitleControls::Control::Close,
@@ -74,9 +73,7 @@ TitleWidget::TitleWidget(not_null<RpWidget*> parent)
 	: nullptr)
 , _controls(
 	_paddingHelper ? &_paddingHelper->controlsParent : this,
-	st::defaultWindowTitle,
-	nullptr,
-	true)
+	st::defaultWindowTitle)
 , _shadow(this, st::titleShadow) {
 	setAttribute(Qt::WA_OpaquePaintEvent);
 
