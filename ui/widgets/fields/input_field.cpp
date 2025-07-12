@@ -5032,6 +5032,43 @@ void InputField::addMarkdownActions(
 		menu);
 	addMarkdownMenuAction(menu, formatting);
 
+	const auto translate = new QAction(
+		integration.phraseTranslate(),
+		menu);
+	menu->insertAction(formatting, translate);
+	connect(translate, &QAction::triggered, this, [&] {
+		const auto cursor = textCursor();
+		QString text;
+
+		if (!cursor.hasSelection()) {
+			text = document()->toPlainText();
+		} else {
+			int from = cursor.selectionStart();
+			int till = cursor.selectionEnd();
+
+			if (from >= till) {
+				return;
+			}
+			if (document()->characterAt(from) == kHardLine) {
+				++from;
+			}
+			if (document()->characterAt(till - 1) == kHardLine) {
+				--till;
+			}
+
+			text = document()->toPlainText().mid(from, till);
+		}
+
+		integration.getTranslateResult(text, [&](QString result) {
+			auto cursor = textCursor();
+			if (cursor.hasSelection()) {
+				cursor.insertText(result);
+			} else {
+				_inner->setText(result);
+			}
+		});
+	});
+
 	const auto submenu = new QMenu(menu);
 	formatting->setMenu(submenu);
 

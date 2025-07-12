@@ -68,6 +68,8 @@ public:
 
 	[[nodiscard]] virtual rpl::producer<> forcePopupMenuHideRequests();
 
+	virtual void getTranslateResult(QString query, std::function<void(QString)> onFinished);
+	[[nodiscard]] virtual QString phraseTranslate();
 	[[nodiscard]] virtual QString phraseContextCopyText();
 	[[nodiscard]] virtual QString phraseContextCopyEmail();
 	[[nodiscard]] virtual QString phraseContextCopyLink();

@@ -96,6 +96,14 @@ rpl::producer<> Integration::forcePopupMenuHideRequests() {
 	return rpl::never<rpl::empty_value>();
 }
 
+void Integration::getTranslateResult(QString query, std::function<void(QString)> onFinished) {
+	return;
+}
+
+QString Integration::phraseTranslate() {
+	return "Translate";
+}
+
 QString Integration::phraseContextCopyText() {
 	return "Copy text";
 }
