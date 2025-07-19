@@ -26,6 +26,7 @@
 #include "ui/painter.h"
 #include "ui/rect.h"
 #include "ui/qt_object_factory.h"
+#include "ui/qt_weak_factory.h"
 #include "ui/ui_utility.h"
 #include "base/platform/base_platform_info.h"
 #include "base/debug_log.h"
@@ -808,7 +809,7 @@ bool SeparatePanel::closeSearch() {
 }
 
 void SeparatePanel::toggleSearch(bool shown) {
-	const auto weak = base::make_weak(this);
+	const auto weak = Ui::MakeWeak(this);
 	if (shown) {
 		if (_searchWrap && _searchWrap->toggled()) {
 			return;
@@ -924,8 +925,8 @@ bool SeparatePanel::createMenu(not_null<IconButton*> button) {
 	}
 	_menu = base::make_unique_q<PopupMenu>(this, _menuSt);
 	_menu->setDestroyedCallback([
-		weak = base::make_weak(this),
-			weakButton = base::make_weak(button),
+		weak = MakeWeak(this),
+			weakButton = MakeWeak(button),
 			menu = _menu.get()]{
 		if (weak && weak->_menu == menu) {
 			if (weakButton) {

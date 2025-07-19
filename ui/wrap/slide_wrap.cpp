@@ -6,6 +6,7 @@
 //
 #include "ui/wrap/slide_wrap.h"
 
+#include "ui/qt_weak_factory.h"
 #include "ui/ui_utility.h"
 #include "styles/style_basic.h"
 
@@ -128,7 +129,7 @@ void SlideWrap<RpWidget>::animationStep() {
 	}
 	const auto shouldBeHidden = !_toggled && !_animation.animating();
 	if (shouldBeHidden != isHidden()) {
-		const auto guard = base::make_weak(this);
+		const auto guard = MakeWeak(this);
 		setVisible(!shouldBeHidden || _minimalHeight);
 		if (shouldBeHidden && guard) {
 			SendPendingMoveResizeEvents(this);

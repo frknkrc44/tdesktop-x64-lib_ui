@@ -7,6 +7,7 @@
 #include "ui/platform/ui_platform_window_title.h"
 
 #include "ui/platform/ui_platform_utility.h"
+#include "ui/qt_weak_factory.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/shadow.h"
 #include "ui/ui_utility.h"
@@ -192,7 +193,7 @@ not_null<QWidget*> TitleControls::window() const {
 
 void TitleControls::init(Fn<void(bool maximized)> maximize) {
 	_minimize->setClickedCallback([=] {
-		const auto weak = base::make_weak(_minimize.data());
+		const auto weak = MakeWeak(_minimize.data());
 		window()->setWindowState(
 			window()->windowState() | Qt::WindowMinimized);
 		if (weak) {
@@ -201,7 +202,7 @@ void TitleControls::init(Fn<void(bool maximized)> maximize) {
 	});
 	_minimize->setPointerCursor(false);
 	_maximizeRestore->setClickedCallback([=] {
-		const auto weak = base::make_weak(_maximizeRestore.data());
+		const auto weak = MakeWeak(_maximizeRestore.data());
 		if (maximize) {
 			maximize(!_maximizedState);
 		} else {
@@ -215,7 +216,7 @@ void TitleControls::init(Fn<void(bool maximized)> maximize) {
 	});
 	_maximizeRestore->setPointerCursor(false);
 	_close->setClickedCallback([=] {
-		const auto weak = base::make_weak(_close.data());
+		const auto weak = MakeWeak(_close.data());
 		window()->close();
 		if (weak) {
 			_close->clearState();

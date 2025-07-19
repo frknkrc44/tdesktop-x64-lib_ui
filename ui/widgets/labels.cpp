@@ -14,6 +14,7 @@
 #include "ui/basic_click_handlers.h" // UrlClickHandler
 #include "ui/inactive_press.h"
 #include "ui/painter.h"
+#include "ui/qt_weak_factory.h"
 #include "ui/integration.h"
 #include "ui/ui_utility.h"
 #include "base/qt/qt_common_adapters.h"
@@ -267,7 +268,7 @@ void FlatLabel::textUpdated() {
 	refreshSize();
 	setMouseTracking(_selectable || _text.hasLinks());
 	if (_text.hasSpoilers()) {
-		_text.setSpoilerLinkFilter([weak = base::make_weak(this)](
+		_text.setSpoilerLinkFilter([weak = Ui::MakeWeak(this)](
 				const ClickContext &context) {
 			return (context.button == Qt::LeftButton) && weak;
 		});
@@ -657,7 +658,7 @@ void FlatLabel::touchEvent(QTouchEvent *e) {
 	case QEvent::TouchEnd: {
 		if (!_touchInProgress) return;
 		_touchInProgress = false;
-		auto weak = base::make_weak(this);
+		auto weak = MakeWeak(this);
 		if (_touchSelect) {
 			dragActionFinish(_touchPos, Qt::RightButton);
 			QContextMenuEvent contextMenu(QContextMenuEvent::Mouse, mapFromGlobal(_touchPos), _touchPos);
