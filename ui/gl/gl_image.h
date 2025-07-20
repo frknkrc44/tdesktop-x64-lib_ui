@@ -10,6 +10,22 @@
 
 #include <QtGui/QOpenGLFunctions>
 
+#ifndef GL_UNPACK_ROW_LENGTH
+#define GL_UNPACK_ROW_LENGTH              0x0CF2
+#endif
+
+#ifndef GL_RG
+#define GL_RG                             0x8227
+#endif
+
+#ifndef GL_R8
+#define GL_R8                             0x8229
+#endif
+
+#ifndef GL_RED
+#define GL_RED                            0x1903
+#endif
+
 namespace Ui::GL {
 namespace details {
 
