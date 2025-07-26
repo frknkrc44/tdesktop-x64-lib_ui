@@ -5079,7 +5079,7 @@ void InputField::addMarkdownActions(
 			text = document()->toPlainText().mid(from, till);
 		}
 
-		integration.getTranslateResult(text, [&](QString result) {
+		integration.getTranslateResult(text, true, [&](QString result) {
 			auto cursor = textCursor();
 			if (cursor.hasSelection()) {
 				cursor.insertText(result);

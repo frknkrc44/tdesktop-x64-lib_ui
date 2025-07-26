@@ -96,7 +96,7 @@ rpl::producer<> Integration::forcePopupMenuHideRequests() {
 	return rpl::never<rpl::empty_value>();
 }
 
-void Integration::getTranslateResult(QString query, std::function<void(QString)> onFinished) {
+void Integration::getTranslateResult(QString query, bool usedForInput, std::function<void(QString)> onFinished) {
 	return;
 }
 
