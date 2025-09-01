@@ -7,6 +7,7 @@
 #pragma once
 
 #include "base/unique_qptr.h"
+#include "base/weak_qptr.h"
 #include "ui/style/style_core_direction.h"
 
 #include <rpl/event_stream.h>
