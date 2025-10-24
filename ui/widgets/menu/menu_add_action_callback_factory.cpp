@@ -57,7 +57,7 @@ MenuCallback CreateAddActionCallback(not_null<Ui::PopupMenu*> menu) {
 		} else if (a.isAttention) {
 			auto owned = base::make_unique_q<Ui::Menu::Action>(
 				menu,
-				st::menuWithIconsAttention,
+				a.icon ? st::menuWithIconsAttention : st::menuAttention,
 				Ui::Menu::CreateAction(
 					menu->menu().get(),
 					a.text,
@@ -128,7 +128,7 @@ MenuCallback CreateAddActionCallback(not_null<Ui::DropdownMenu*> menu) {
 		} else if (a.isAttention) {
 			auto owned = base::make_unique_q<Ui::Menu::Action>(
 				menu,
-				st::menuWithIconsAttention,
+				a.icon ? st::menuWithIconsAttention : st::menuAttention,
 				Ui::Menu::CreateAction(
 					menu->menu().get(),
 					a.text,
