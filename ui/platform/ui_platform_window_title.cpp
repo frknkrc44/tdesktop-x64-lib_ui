@@ -90,7 +90,7 @@ void IconTitleButtons::updateState(
 			? &st.minimizeIconActiveOver
 			: &st.minimize.iconOver;
 		_minimize->setIconOverride(minimize, minimizeOver);
-		_minimize->accessibilitySetName(Ui::Integration::Instance().phraseMinimize());
+		_minimize->setAccessibleName(Ui::Integration::Instance().phraseMinimize());
 	}
 	if (_maximizeRestore) {
 		if (maximized) {
@@ -101,7 +101,7 @@ void IconTitleButtons::updateState(
 				? &st.restoreIconActiveOver
 				: &st.restoreIconOver;
 			_maximizeRestore->setIconOverride(restore, restoreOver);
-			_maximizeRestore->accessibilitySetName(Ui::Integration::Instance().phraseRestore());
+			_maximizeRestore->setAccessibleName(Ui::Integration::Instance().phraseRestore());
 		} else {
 			const auto maximize = active
 				? &st.maximizeIconActive
@@ -110,7 +110,7 @@ void IconTitleButtons::updateState(
 				? &st.maximizeIconActiveOver
 				: &st.maximize.iconOver;
 			_maximizeRestore->setIconOverride(maximize, maximizeOver);
-			_maximizeRestore->accessibilitySetName(Ui::Integration::Instance().phraseMaximize());
+			_maximizeRestore->setAccessibleName(Ui::Integration::Instance().phraseMaximize());
 		}
 	}
 	if (_close) {
@@ -121,7 +121,7 @@ void IconTitleButtons::updateState(
 			? &st.closeIconActiveOver
 			: &st.close.iconOver;
 		_close->setIconOverride(close, closeOver);
-		_close->accessibilitySetName(Ui::Integration::Instance().phraseButtonClose());
+		_close->setAccessibleName(Ui::Integration::Instance().phraseButtonClose());
 	}
 }
 
