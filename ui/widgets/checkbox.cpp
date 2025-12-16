@@ -288,7 +288,7 @@ Fn<void()> CheckView::PrepareNonToggledError(
 	view->checkedChanges(
 	) | rpl::filter([=](bool checked) {
 		return checked;
-	}) | rpl::start_with_next([=] {
+	}) | rpl::on_next([=] {
 		state->error = false;
 		view->setUntoggledOverride(std::nullopt);
 	}, lifetime);
@@ -506,7 +506,7 @@ Checkbox::Checkbox(
 	setCursor(style::cur_pointer);
 	std::move(
 		text
-	) | rpl::start_with_next([=](const TextWithEntities &value) {
+	) | rpl::on_next([=](const TextWithEntities &value) {
 		setMarkedText(value);
 	}, lifetime());
 }
@@ -944,7 +944,7 @@ Radiobutton::Radiobutton(
 	checkbox()->checkedChanges(
 	) | rpl::filter(
 		_1
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		_group->setValue(_value);
 	}, lifetime());
 
@@ -969,7 +969,7 @@ void Radiobutton::trackScreenReaderState() {
 	rpl::combine(
 		reader->activeValue(),
 		(_group->hasValue()
-			? std::move(maybeValue) | rpl::type_erased()
+			? (std::move(maybeValue) | rpl::type_erased)
 			: rpl::single(
 				std::optional<int>()
 			) | rpl::then(std::move(maybeValue)))
@@ -985,7 +985,7 @@ void Radiobutton::trackScreenReaderState() {
 			}
 		}
 		return Qt::StrongFocus;
-	}) | rpl::start_with_next([=](Qt::FocusPolicy value) {
+	}) | rpl::on_next([=](Qt::FocusPolicy value) {
 		if (focusPolicy() != value) {
 			setFocusPolicy(value);
 		}

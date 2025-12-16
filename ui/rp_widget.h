@@ -99,7 +99,7 @@ public:
 	void showOn(rpl::producer<bool, Error, Generator> &&shown) {
 		std::move(
 			shown
-		) | rpl::start_with_next([this](bool visible) {
+		) | rpl::on_next([this](bool visible) {
 			callSetVisible(visible);
 		}, lifetime());
 	}

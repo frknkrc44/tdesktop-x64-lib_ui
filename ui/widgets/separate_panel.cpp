@@ -405,7 +405,7 @@ SeparatePanel::SeparatePanel(SeparatePanelArgs &&args)
 		_fullscreen.value()
 	) | rpl::filter([=](bool shown, bool) {
 		return shown;
-	}) | rpl::start_with_next([=](bool, bool fullscreen) {
+	}) | rpl::on_next([=](bool, bool fullscreen) {
 		updateControlsVisibility(fullscreen);
 		Platform::SetWindowMargins(
 			this,
@@ -414,7 +414,7 @@ SeparatePanel::SeparatePanel(SeparatePanelArgs &&args)
 
 	Platform::FullScreenEvents(
 		this
-	) | rpl::start_with_next([=](Platform::FullScreenEvent event) {
+	) | rpl::on_next([=](Platform::FullScreenEvent event) {
 		if (event == Platform::FullScreenEvent::DidEnter) {
 			createFullScreenButtons();
 		} else if (event == Platform::FullScreenEvent::WillExit) {
@@ -448,7 +448,7 @@ void SeparatePanel::setTitleBadge(object_ptr<RpWidget> badge) {
 
 void SeparatePanel::initControls() {
 	_back->toggledValue(
-	) | rpl::start_with_next([=](bool toggled) {
+	) | rpl::on_next([=](bool toggled) {
 		_titleLeft.start(
 			[=] { updateTitleGeometry(width()); },
 			toggled ? 0. : 1.,
@@ -462,7 +462,7 @@ void SeparatePanel::initControls() {
 	_titleLeft.stop();
 
 	_fullscreen.value(
-	) | rpl::start_with_next([=](bool fullscreen) {
+	) | rpl::on_next([=](bool fullscreen) {
 		if (!fullscreen) {
 			_fsClose = nullptr;
 			_fsMenuToggle = nullptr;
@@ -475,7 +475,7 @@ void SeparatePanel::initControls() {
 	rpl::combine(
 		widthValue(),
 		_fullscreen.value()
-	) | rpl::start_with_next([=](int width, bool fullscreen) {
+	) | rpl::on_next([=](int width, bool fullscreen) {
 		const auto padding = computePadding();
 		_back->moveToLeft(padding.left(), padding.top());
 		_close->moveToRight(padding.right(), padding.top());
@@ -522,7 +522,7 @@ void SeparatePanel::createFullScreenButtons() {
 	} else {
 		_fsMenuToggle = nullptr;
 	}
-	geometryValue() | rpl::start_with_next([=](QRect geometry) {
+	geometryValue() | rpl::on_next([=](QRect geometry) {
 		if (_fsAllowChildControls) {
 			geometry = QRect(QPoint(), size());
 		}
@@ -749,7 +749,7 @@ void SeparatePanel::setMenuAllowed(
 	rpl::combine(
 		widthValue(),
 		_fullscreen.value()
-	) | rpl::start_with_next([=](int width, bool) {
+	) | rpl::on_next([=](int width, bool) {
 		const auto padding = computePadding();
 		_menuToggle->moveToRight(
 			padding.right() + _close->width(),
@@ -791,7 +791,7 @@ void SeparatePanel::setSearchAllowed(
 	rpl::combine(
 		widthValue(),
 		_fullscreen.value()
-	) | rpl::start_with_next([=](int width, bool) {
+	) | rpl::on_next([=](int width, bool) {
 		const auto padding = computePadding();
 		_searchToggle->moveToRight(
 			padding.right() + _close->width(),
@@ -816,7 +816,7 @@ void SeparatePanel::toggleSearch(bool shown) {
 		}
 		_searchWrap.create(this, object_ptr<RpWidget>(this));
 		const auto inner = _searchWrap->entity();
-		inner->paintRequest() | rpl::start_with_next([=](QRect clip) {
+		inner->paintRequest() | rpl::on_next([=](QRect clip) {
 			QPainter(inner).fillRect(clip, st::windowBg);
 		}, inner->lifetime());
 		_searchField = CreateChild<InputField>(
@@ -830,7 +830,7 @@ void SeparatePanel::toggleSearch(bool shown) {
 		const auto field = _searchField;
 		field->changes() | rpl::filter([=] {
 			return (_searchField == field);
-		}) | rpl::start_with_next([=] {
+		}) | rpl::on_next([=] {
 			if (const auto onstack = _searchQueryChanged) {
 				onstack(field->getLastText());
 			}
@@ -841,7 +841,7 @@ void SeparatePanel::toggleSearch(bool shown) {
 			allCloseRequests()
 		) | rpl::filter([=] {
 			return (_searchField == field);
-		}) | rpl::start_with_next([=] {
+		}) | rpl::on_next([=] {
 			toggleSearch(false);
 		}, field->lifetime());
 
@@ -859,7 +859,7 @@ void SeparatePanel::toggleSearch(bool shown) {
 		inner->shownValue(
 		) | rpl::filter([=](bool active) {
 			return active && (_searchField == field);
-		}) | rpl::take(1) | rpl::start_with_next([=] {
+		}) | rpl::take(1) | rpl::on_next([=] {
 			InvokeQueued(field, [=] {
 				if (_searchField == field && window()->isActiveWindow()) {
 					// In case focus is somewhat in a native child window,
@@ -883,7 +883,7 @@ void SeparatePanel::toggleSearch(bool shown) {
 		_searchWrap->shownValue(
 		) | rpl::filter(
 			!rpl::mappers::_1
-		) | rpl::start_with_next([=] {
+		) | rpl::on_next([=] {
 			_searchWrap.destroy();
 		}, _searchWrap->lifetime());
 	} else if (_searchField) {
@@ -1001,7 +1001,7 @@ void SeparatePanel::initLayout(const SeparatePanelArgs &args) {
 
 	validateBorderImage();
 	style::PaletteChanged(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		validateBorderImage();
 		ForceFullRepaint(this);
 	}, lifetime());
@@ -1190,13 +1190,13 @@ void SeparatePanel::ensureLayerCreated() {
 	_layer->setHideByBackgroundClick(false);
 	_layer->move(0, 0);
 	_body->sizeValue(
-	) | rpl::start_with_next([=](QSize size) {
+	) | rpl::on_next([=](QSize size) {
 		_layer->resize(size);
 	}, _layer->lifetime());
 	_layer->hideFinishEvents(
 	) | rpl::filter([=] {
 		return _layer != nullptr; // Last hide finish is sent from destructor.
-	}) | rpl::start_with_next([=] {
+	}) | rpl::on_next([=] {
 		destroyLayer();
 	}, _layer->lifetime());
 }
@@ -1228,7 +1228,7 @@ void SeparatePanel::showInner(base::unique_qptr<RpWidget> inner) {
 	_inner->setParent(_body);
 	_inner->move(0, 0);
 	_body->sizeValue(
-	) | rpl::start_with_next([=](QSize size) {
+	) | rpl::on_next([=](QSize size) {
 		_inner->resize(size);
 	}, _inner->lifetime());
 	_inner->show();
