@@ -125,14 +125,17 @@ void ItemBase::enableMouseSelecting(not_null<RpWidget*> widget) {
 
 void ItemBase::setClickedCallback(Fn<void()> callback) {
 	Ui::AbstractButton::setClickedCallback(callback);
-	_connection = QObject::connect(
-		action(),
-		&QAction::triggered,
-		std::move(callback));
+	if (callback) {
+		_connection = QObject::connect(
+			action(),
+			&QAction::triggered,
+			std::move(callback));
+	} else {
+		_connection.reset();
+	}
 }
 
 void ItemBase::mousePressEvent(QMouseEvent *e) {
-	_mouseMovedAfterLeftPress = false;
 	if (e->button() == Qt::LeftButton) {
 		_mousePressed = true;
 	}
@@ -140,7 +143,6 @@ void ItemBase::mousePressEvent(QMouseEvent *e) {
 }
 
 void ItemBase::mouseMoveEvent(QMouseEvent *e) {
-	_mouseMovedAfterLeftPress = true;
 	if (_mousePressed && _menu && !rect().contains(e->pos())) {
 		_menu->handlePressedOutside(e->globalPos());
 	}
@@ -156,16 +158,8 @@ void ItemBase::mouseReleaseEvent(QMouseEvent *e) {
 	}
 #endif // Q_OS_UNIX
 	const auto isInRect = rect().contains(e->pos());
-	if (!wasPressed
-		&& isInRect
-		&& isEnabled()
-		&& e->button() == Qt::LeftButton
-		&& _mouseMovedAfterLeftPress) {
-		Ui::AbstractButton::setDown(
-			false,
-			StateChangeSource::ByPress,
-			e->modifiers(),
-			e->button());
+	if (isInRect && isEnabled() && e->button() == Qt::LeftButton) {
+		//
 		setClicked(TriggeredSource::Mouse);
 		return;
 	}
