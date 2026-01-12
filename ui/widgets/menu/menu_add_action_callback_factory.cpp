@@ -34,7 +34,7 @@ MenuCallback CreateAddActionCallback(not_null<Ui::PopupMenu*> menu) {
 		if (a.hideRequests) {
 			std::move(
 				a.hideRequests
-			) | rpl::start_with_next([=](anim::type animated) {
+			) | rpl::on_next([=](anim::type animated) {
 				menu->hideMenu(animated == anim::type::instant);
 			}, menu->lifetime());
 		}
@@ -105,7 +105,7 @@ MenuCallback CreateAddActionCallback(not_null<Ui::DropdownMenu*> menu) {
 			Unexpected("Dropdown menu does not support hideRequests.");
 		// 	std::move(
 		// 		a.hideRequests
-		// 	) | rpl::start_with_next([=](anim::type animated) {
+		// 	) | rpl::on_next([=](anim::type animated) {
 		// 		menu->hideMenu(animated == anim::type::instant);
 		// 	}, menu->lifetime());
 		}

@@ -23,7 +23,7 @@ AbstractButton::AbstractButton(QWidget *parent) : RpWidget(parent) {
 	using namespace rpl::mappers;
 	shownValue()
 		| rpl::filter(_1 == false)
-		| rpl::start_with_next([this] { clearState(); }, lifetime());
+		| rpl::on_next([this] { clearState(); }, lifetime());
 }
 
 void AbstractButton::leaveEventHook(QEvent *e) {
@@ -222,5 +222,13 @@ void AbstractButton::clearState() {
 AccessibilityState AbstractButton::accessibilityState() const {
 	return { .pressed = isDown() };
 	}
+
+void AbstractButton::accessibilityDoAction(const QString &name) {
+	if (name == QAccessibleActionInterface::pressAction()) {
+		if (!isDisabled()) {
+			clicked(Qt::NoModifier, Qt::LeftButton);
+		}
+	}
+}
 
 } // namespace Ui

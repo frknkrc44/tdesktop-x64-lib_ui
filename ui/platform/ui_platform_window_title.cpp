@@ -42,14 +42,14 @@ void SetupSemiNativeSystemButtons(
 	window->systemButtonOver(
 	) | rpl::filter([=](HitTestResult button) {
 		return !filter || filter() || (button == HitTestResult::None);
-	}) | rpl::start_with_next([=](HitTestResult button) {
+	}) | rpl::on_next([=](HitTestResult button) {
 		controls->buttonOver(button);
 	}, lifetime);
 
 	window->systemButtonDown(
 	) | rpl::filter([=](HitTestResult button) {
 		return !filter || filter() || (button == HitTestResult::None);
-	}) | rpl::start_with_next([=](HitTestResult button) {
+	}) | rpl::on_next([=](HitTestResult button) {
 		controls->buttonDown(button);
 	}, lifetime);
 }
@@ -153,7 +153,7 @@ TitleControls::TitleControls(
 	init(std::move(maximize));
 
 	_close->paintRequest(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		const auto active = window()->isActiveWindow();
 		if (_activeState != active) {
 			_activeState = active;
@@ -232,7 +232,7 @@ void TitleControls::init(Fn<void(bool maximized)> maximize) {
 	rpl::combine(
 		parent()->widthValue(),
 		_layout->value()
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		updateControlsPosition();
 	}, _close->lifetime());
 
@@ -545,7 +545,7 @@ std::unique_ptr<SeparateTitleControls> SetupSeparateTitleControls(
 		window->body()->widthValue(),
 		window->additionalContentPaddingValue(),
 		controlsTop ? std::move(controlsTop) : rpl::single(0)
-	) | rpl::start_with_next([=](int width, int padding, int top) {
+	) | rpl::on_next([=](int width, int padding, int top) {
 		raw->wrap.setGeometry(
 			0,
 			top,
@@ -554,7 +554,7 @@ std::unique_ptr<SeparateTitleControls> SetupSeparateTitleControls(
 	}, lifetime);
 
 	window->hitTestRequests(
-	) | rpl::start_with_next([=](not_null<HitTestRequest*> request) {
+	) | rpl::on_next([=](not_null<HitTestRequest*> request) {
 		const auto controlsResult = raw->controls.hitTest(request->point);
 		if (controlsResult != HitTestResult::None) {
 			request->result = controlsResult;

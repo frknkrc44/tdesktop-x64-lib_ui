@@ -20,11 +20,11 @@ InnerDropdown::InnerDropdown(
 	const style::InnerDropdown &st)
 : RpWidget(parent)
 , _st(st)
-, _roundRect(ImageRoundRadius::Small, _st.bg)
+, _roundRect(st::innerDropdownRadius, _st.bg)
 , _hideTimer([=] { hideAnimated(); })
 , _scroll(this, _st.scroll) {
 	_scroll->scrolls(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		scrolled();
 	}, lifetime());
 
@@ -40,7 +40,7 @@ InnerDropdown::InnerDropdown(
 	}) | rpl::flatten_latest(
 	) | rpl::filter([=] {
 		return !isHidden();
-	}) | rpl::start_with_next([=] {
+	}) | rpl::on_next([=] {
 		leaveEvent(nullptr);
 	}, lifetime());
 }
@@ -49,7 +49,7 @@ QPointer<RpWidget> InnerDropdown::doSetOwnedWidget(
 		object_ptr<RpWidget> widget) {
 	auto result = QPointer<RpWidget>(widget);
 	widget->heightValue(
-	) | rpl::skip(1) | rpl::start_with_next([=] {
+	) | rpl::skip(1) | rpl::on_next([=] {
 		resizeToContent();
 	}, widget->lifetime());
 	auto container = _scroll->setOwnedWidget(
@@ -306,7 +306,7 @@ void InnerDropdown::startShowAnimation() {
 		auto inner = rect().marginsRemoved(_st.padding);
 		_showAnimation->setFinalImage(std::move(cache), QRect(inner.topLeft() * pixelRatio, inner.size() * pixelRatio));
 		_showAnimation->setCornerMasks(
-			Images::CornersMask(ImageRoundRadius::Small));
+			Images::CornersMask(st::innerDropdownRadius));
 		_showAnimation->start();
 	}
 	hideChildren();

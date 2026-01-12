@@ -413,7 +413,7 @@ void WindowHelper::setStaysOnTop(bool enabled) {
 }
 
 void WindowHelper::setGeometry(QRect rect) {
-	SetGeometryAndScreen(window(), rect.marginsAdded(frameMargins()));
+	window()->setGeometry(rect.marginsAdded(frameMargins()));
 }
 
 void WindowHelper::setupBodyTitleAreaEvents() {
@@ -446,7 +446,7 @@ void WindowHelper::init() {
 	updateCustomTitleVisibility(true);
 
 	style::PaletteChanged(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		Ui::ForceFullRepaint(window());
 	}, window()->lifetime());
 
@@ -454,7 +454,7 @@ void WindowHelper::init() {
 		window()->sizeValue(),
 		_title->heightValue(),
 		_title->shownValue()
-	) | rpl::start_with_next([=](QSize size, int titleHeight, bool shown) {
+	) | rpl::on_next([=](QSize size, int titleHeight, bool shown) {
 		if (!shown) {
 			titleHeight = 0;
 		}
@@ -500,7 +500,7 @@ rpl::producer<FullScreenEvent> FullScreenEvents(
 		};
 		const auto state = result.make_state<State>();
 
-		window->winIdValue() | rpl::start_with_next([=](WId winId) {
+		window->winIdValue() | rpl::on_next([=](WId winId) {
 			if (const auto was = base::take(state->observer)) {
 				[was release];
 			}

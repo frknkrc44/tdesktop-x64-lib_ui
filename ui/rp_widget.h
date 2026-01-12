@@ -99,7 +99,7 @@ public:
 	void showOn(rpl::producer<bool, Error, Generator> &&shown) {
 		std::move(
 			shown
-		) | rpl::start_with_next([this](bool visible) {
+		) | rpl::on_next([this](bool visible) {
 			callSetVisible(visible);
 		}, lifetime());
 	}
@@ -393,6 +393,8 @@ public:
 	void accessibilityStateChanged(AccessibilityState changes);
 	[[nodiscard]] virtual QString accessibilityValue() const;
 	void accessibilityValueChanged();
+	[[nodiscard]] virtual QStringList accessibilityActionNames();
+	virtual void accessibilityDoAction(const QString &name);
 
 protected:
 	// e - from enterEvent() of child RpWidget

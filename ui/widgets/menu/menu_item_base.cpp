@@ -6,12 +6,19 @@
 //
 #include "ui/widgets/menu/menu_item_base.h"
 
+#include "ui/widgets/menu/menu.h"
+
 namespace Ui::Menu {
 
 ItemBase::ItemBase(
 	not_null<RpWidget*> parent,
 	const style::Menu &st)
 : RippleButton(parent, st.ripple) {
+}
+
+void ItemBase::setMenuAsParent(not_null<Menu*> menu) {
+	QWidget::setParent(menu);
+	_menu = menu;
 }
 
 void ItemBase::setSelected(
@@ -80,7 +87,7 @@ int ItemBase::minWidth() const {
 void ItemBase::initResizeHook(rpl::producer<QSize> &&size) {
 	std::move(
 		size
-	) | rpl::start_with_next([=](QSize s) {
+	) | rpl::on_next([=](QSize s) {
 		resize(s.width(), contentHeight());
 	}, lifetime());
 }
@@ -99,7 +106,7 @@ void ItemBase::enableMouseSelecting() {
 
 void ItemBase::enableMouseSelecting(not_null<RpWidget*> widget) {
 	widget->events(
-	) | rpl::start_with_next([=](not_null<QEvent*> e) {
+	) | rpl::on_next([=](not_null<QEvent*> e) {
 		const auto type = e->type();
 		if (((type == QEvent::Leave)
 			|| (type == QEvent::Enter)
@@ -114,6 +121,52 @@ void ItemBase::enableMouseSelecting(not_null<RpWidget*> widget) {
 			}
 		}
 	}, lifetime());
+}
+
+void ItemBase::setClickedCallback(Fn<void()> callback) {
+	Ui::AbstractButton::setClickedCallback(callback);
+	if (callback) {
+		_connection = QObject::connect(
+			action(),
+			&QAction::triggered,
+			std::move(callback));
+	} else {
+		_connection.reset();
+	}
+}
+
+void ItemBase::mousePressEvent(QMouseEvent *e) {
+	if (e->button() == Qt::LeftButton) {
+		_mousePressed = true;
+	}
+	RippleButton::mousePressEvent(e);
+}
+
+void ItemBase::mouseMoveEvent(QMouseEvent *e) {
+	if (_mousePressed && _menu && !rect().contains(e->pos())) {
+		_menu->handlePressedOutside(e->globalPos());
+	}
+	RippleButton::mouseMoveEvent(e);
+}
+
+void ItemBase::mouseReleaseEvent(QMouseEvent *e) {
+	const auto wasPressed = base::take(_mousePressed);
+#ifdef Q_OS_UNIX
+	if (isEnabled() && e->button() == Qt::RightButton) {
+		setClicked(TriggeredSource::Mouse);
+		return;
+	}
+#endif // Q_OS_UNIX
+	const auto isInRect = rect().contains(e->pos());
+	if (isInRect && isEnabled() && e->button() == Qt::LeftButton) {
+		//
+		setClicked(TriggeredSource::Mouse);
+		return;
+	}
+	if (wasPressed && _menu && !isInRect) {
+		_menu->handleMouseRelease(e->globalPos());
+	}
+	RippleButton::mouseReleaseEvent(e);
 }
 
 } // namespace Ui::Menu
