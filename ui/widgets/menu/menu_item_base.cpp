@@ -11,14 +11,10 @@
 namespace Ui::Menu {
 
 ItemBase::ItemBase(
-	not_null<RpWidget*> parent,
+	not_null<Menu*> parent,
 	const style::Menu &st)
-: RippleButton(parent, st.ripple) {
-}
-
-void ItemBase::setMenuAsParent(not_null<Menu*> menu) {
-	QWidget::setParent(menu);
-	_menu = menu;
+: RippleButton(parent, st.ripple)
+, _menu(parent) {
 }
 
 void ItemBase::setSelected(
@@ -42,7 +38,14 @@ bool ItemBase::isSelected() const {
 rpl::producer<CallbackData> ItemBase::selects() const {
 	return _selected.changes(
 	) | rpl::map([=](bool selected) -> CallbackData {
-		return { action(), y(), _lastTriggeredSource, _index, selected };
+		return {
+			action(),
+			y(),
+			_lastTriggeredSource,
+			_index,
+			selected,
+			_preventClose,
+		};
 	});
 }
 
@@ -72,7 +75,14 @@ rpl::producer<CallbackData> ItemBase::clicks() const {
 	) | rpl::filter([=] {
 		return isEnabled() && !AbstractButton::isDisabled();
 	}) | rpl::map([=]() -> CallbackData {
-		return { action(), y(), _lastTriggeredSource, _index, true };
+		return {
+			action(),
+			y(),
+			_lastTriggeredSource,
+			_index,
+			true,
+			_preventClose,
+		};
 	});
 }
 
@@ -84,16 +94,24 @@ int ItemBase::minWidth() const {
 	return _minWidth.current();
 }
 
-void ItemBase::initResizeHook(rpl::producer<QSize> &&size) {
-	std::move(
-		size
-	) | rpl::on_next([=](QSize s) {
-		resize(s.width(), contentHeight());
+void ItemBase::fitToMenuWidth() {
+	_menu->widthValue() | rpl::on_next([=](int w) {
+		if (w > 0) {
+			resize(w, contentHeight());
+		}
 	}, lifetime());
 }
 
 void ItemBase::setMinWidth(int w) {
 	_minWidth = w;
+}
+
+void ItemBase::setPreventClose(bool prevent) {
+	_preventClose = prevent;
+}
+
+bool ItemBase::preventClose() const {
+	return _preventClose;
 }
 
 void ItemBase::finishAnimating() {
@@ -123,8 +141,7 @@ void ItemBase::enableMouseSelecting(not_null<RpWidget*> widget) {
 	}, lifetime());
 }
 
-void ItemBase::setClickedCallback(Fn<void()> callback) {
-	Ui::AbstractButton::setClickedCallback(callback);
+void ItemBase::setActionTriggered(Fn<void()> callback) {
 	if (callback) {
 		_connection = QObject::connect(
 			action(),
@@ -158,7 +175,10 @@ void ItemBase::mouseReleaseEvent(QMouseEvent *e) {
 	}
 #endif // Q_OS_UNIX
 	const auto isInRect = rect().contains(e->pos());
-	if (isInRect && isEnabled() && e->button() == Qt::LeftButton) {
+	if (isInRect
+		&& isEnabled()
+		&& e->button() == Qt::LeftButton
+		&& !wasPressed) {
 		//
 		setClicked(TriggeredSource::Mouse);
 		return;
