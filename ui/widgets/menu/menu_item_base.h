@@ -18,7 +18,7 @@ class Menu;
 
 class ItemBase : public RippleButton {
 public:
-	ItemBase(not_null<RpWidget*> parent, const style::Menu &st);
+	ItemBase(not_null<Menu*> parent, const style::Menu &st);
 
 	TriggeredSource lastTriggeredSource() const;
 
@@ -35,7 +35,11 @@ public:
 
 	rpl::producer<CallbackData> clicks() const;
 
-	void setClickedCallback(Fn<void()> callback);
+	void setActionTriggered(Fn<void()> callback);
+	void setClickedCallback(Fn<void()> callback) = delete;
+
+	void setPreventClose(bool prevent);
+	bool preventClose() const;
 
 	rpl::producer<int> minWidthValue() const;
 	int minWidth() const;
@@ -44,15 +48,13 @@ public:
 	virtual void handleKeyPress(not_null<QKeyEvent*> e) {
 	}
 
-	void setMenuAsParent(not_null<Menu*> menu);
-
 	virtual not_null<QAction*> action() const = 0;
 	virtual bool isEnabled() const = 0;
 
 	virtual void finishAnimating();
 
 protected:
-	void initResizeHook(rpl::producer<QSize> &&size);
+	void fitToMenuWidth();
 
 	void enableMouseSelecting();
 	void enableMouseSelecting(not_null<RpWidget*> widget);
@@ -73,6 +75,8 @@ private:
 	rpl::variable<int> _minWidth = 0;
 
 	TriggeredSource _lastTriggeredSource = TriggeredSource::Mouse;
+
+	bool _preventClose = false;
 
 	base::qt_connection _connection;
 
