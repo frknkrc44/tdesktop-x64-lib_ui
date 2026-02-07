@@ -945,6 +945,10 @@ void FlatLabel::setTextColorOverride(std::optional<QColor> color) {
 }
 
 void FlatLabel::paintEvent(QPaintEvent *e) {
+	if (_opacity == 0.) {
+		return;
+	}
+
 	Painter p(this);
 	p.setOpacity(_opacity);
 	if (_textColorOverride) {

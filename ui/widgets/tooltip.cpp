@@ -16,6 +16,7 @@
 #include <QtGui/QScreen>
 #include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
+#include <qpa/qplatformwindow_p.h>
 
 namespace Ui {
 
@@ -110,6 +111,21 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
 	if (s.width() < 2 * _st->shift.x()) {
 		p.setX(m.x() - (s.width() / 2));
 	}
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 11, 0) && defined QT_FEATURE_wayland && QT_CONFIG(wayland)
+	using namespace QNativeInterface::Private;
+	create();
+	if (const auto native
+			= windowHandle()->nativeInterface<QWaylandWindow>()) {
+		native->setParentControlGeometry(
+			QRect(
+				QPoint(m.x() + _st->shift.x(), m.y() - _st->skip),
+				QSize(-_st->shift.x() * 2, _st->shift.y() + _st->skip)));
+		// even though Qt has tooltip type, our tooltip behaves like a menu
+		// (bottom left origin, no flip_x)
+		native->setExtendedWindowType(QWaylandWindow::Menu);
+	}
+#endif // Qt >= 6.11.0 && wayland
 
 	const auto screen = QGuiApplication::screenAt(m);
 	if (screen) {
@@ -482,6 +498,51 @@ object_ptr<FlatLabel> MakeNiceTooltipLabel(
 		raw->resizeToWidth(niceWidth);
 	}, raw->lifetime());
 	return result;
+}
+
+namespace {
+
+class TooltipShower final : public AbstractTooltipShower {
+public:
+	TooltipShower(not_null<RpWidget*> widget, Fn<QString()> text)
+	: _widget(widget), _text(std::move(text)) {
+	}
+
+	QString tooltipText() const override {
+		return _text ? _text() : QString();
+	}
+
+	QPoint tooltipPos() const override {
+		return _widget->mapToGlobal(_widget->rect().center());
+	}
+
+	bool tooltipWindowActive() const override {
+		return _widget->window() && _widget->window()->isActiveWindow();
+	}
+
+private:
+	not_null<RpWidget*> _widget;
+	Fn<QString()> _text;
+
+};
+
+} // namespace
+
+void InstallTooltip(
+		not_null<RpWidget*> widget,
+		Fn<QString()> text,
+		const style::Tooltip *st) {
+	const auto shower = widget->lifetime().make_state<TooltipShower>(
+		widget,
+		std::move(text));
+
+	widget->events() | rpl::on_next([=](not_null<QEvent*> e) {
+		if (e->type() == QEvent::Enter) {
+			Tooltip::Show(1000, shower);
+		} else if (e->type() == QEvent::Leave) {
+			Tooltip::Hide();
+		}
+	}, widget->lifetime());
 }
 
 } // namespace Ui
