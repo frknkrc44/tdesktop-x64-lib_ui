@@ -85,6 +85,7 @@ public:
 	[[nodiscard]] virtual QString phraseFormattingBlockquote();
 	[[nodiscard]] virtual QString phraseFormattingMonospace();
 	[[nodiscard]] virtual QString phraseFormattingSpoiler();
+	[[nodiscard]] virtual QString phraseFormattingDate();
 	[[nodiscard]] virtual QString phraseButtonOk();
 	[[nodiscard]] virtual QString phraseButtonClose();
 	[[nodiscard]] virtual QString phraseButtonCancel();
