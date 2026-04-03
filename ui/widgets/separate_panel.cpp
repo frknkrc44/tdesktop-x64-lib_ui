@@ -406,7 +406,9 @@ SeparatePanel::SeparatePanel(SeparatePanelArgs &&args)
 	) | rpl::filter([=](bool shown, bool) {
 		return shown;
 	}) | rpl::on_next([=](bool, bool fullscreen) {
-		updateControlsVisibility(fullscreen);
+		if (_animationCache.isNull()) {
+			updateControlsVisibility(fullscreen);
+		}
 		Platform::SetWindowMargins(
 			this,
 			_useTransparency ? computePadding() : QMargins());
