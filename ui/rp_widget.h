@@ -363,6 +363,8 @@ private:
 
 	Initer _initer = { this, Traits::kSetZeroGeometry };
 
+	friend class RpWidget;
+
 };
 
 // Add required fields from QAccessible::State when necessary.
@@ -384,6 +386,7 @@ class RpWidget : public RpWidgetBase<QWidget> {
 
 public:
 	explicit RpWidget(QWidget *parent = nullptr);
+	virtual ~RpWidget();
 
 	// Resize to minimum of natural width and available width.
 	void resizeToNaturalWidth(int newWidth) {
