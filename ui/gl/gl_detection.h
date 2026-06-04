@@ -20,6 +20,7 @@ namespace Ui::GL {
 enum class Backend {
 	Raster,
 	OpenGL,
+	QRhi,
 };
 
 struct Capabilities {
@@ -27,8 +28,12 @@ struct Capabilities {
 	bool transparency = false;
 };
 
+extern const char kOptionUseQtRhi[];
+
 [[nodiscard]] Capabilities CheckCapabilities(QWidget *widget = nullptr);
 [[nodiscard]] Backend ChooseBackendDefault(Capabilities capabilities);
+
+[[nodiscard]] bool WidgetsRhiEnabled();
 
 void ForceDisable(bool disable);
 
