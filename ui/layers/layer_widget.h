@@ -126,6 +126,10 @@ public:
 	virtual bool closeByOutsideClick() const {
 		return true;
 	}
+	virtual bool closeByBackButton() {
+		closeLayer();
+		return true;
+	}
 	[[nodiscard]] virtual crl::time animationDuration() const {
 		return 0;
 	}
@@ -202,6 +206,7 @@ public:
 	void hideLayers(anim::type animated) override;
 	void hideAll(anim::type animated);
 	void hideTopLayer(anim::type animated);
+	bool closeCurrentByBackButton();
 	void setHideByBackgroundClick(bool hide);
 	void removeBodyCache();
 
@@ -214,6 +219,8 @@ public:
 		const ::Window::SectionShow &params);
 
 	bool layerShown() const;
+	bool boxShown() const;
+	[[nodiscard]] rpl::producer<bool> boxShownValue() const;
 	const LayerWidget *topShownLayer() const;
 
 	~LayerStackWidget();
@@ -269,6 +276,7 @@ private:
 	void animationDone();
 
 	void setCacheImages();
+	void updateBoxShown();
 	void clearLayers();
 	void clearSpecialLayer();
 	void initChildLayer(LayerWidget *layer);
@@ -300,6 +308,7 @@ private:
 	bool _hideByBackgroundClick = true;
 
 	rpl::event_stream<> _hideFinishStream;
+	rpl::variable<bool> _boxShown = false;
 
 };
 
