@@ -86,6 +86,7 @@ class CustomFieldObject;
 
 struct MarkdownEnabled {
 	base::flat_set<QString> tagsSubset;
+	bool typedTags = true;
 
 	friend inline bool operator==(
 		const MarkdownEnabled &,
@@ -101,6 +102,7 @@ struct MarkdownEnabledState {
 
 	[[nodiscard]] bool disabled() const;
 	[[nodiscard]] bool enabledForTag(QStringView tag) const;
+	[[nodiscard]] bool typedTagsEnabled() const;
 
 	friend inline bool operator==(
 		const MarkdownEnabledState &,
@@ -298,6 +300,8 @@ public:
 		const QString &tag,
 		const QString &text);
 	[[nodiscard]] bool isMarkdownTagActive(const QString &tag) const;
+	[[nodiscard]] QString selectionMarkdownTagForToggle(
+		const QString &tag) const;
 	void toggleCurrentMarkdownTag(const QString &tag);
 	void clearCurrentMarkdown();
 	[[nodiscard]] bool hasCurrentMarkdownLink() const;

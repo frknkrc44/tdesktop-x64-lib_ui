@@ -510,9 +510,6 @@ void TrimFullCoverageTags(TextWithTags &parsed) {
 		}
 		auto found = false;
 		for (const auto &single : TextUtilities::SplitTags(existing.id)) {
-			const auto normalized = IsTagPre(single)
-				? QStringView(kTagCode)
-				: single;
 			if (checkingLink
 				&& IsEditableLinkTag(single, instantViewEditorTagsEnabled)) {
 				if (resultLink.isEmpty()) {
@@ -524,9 +521,20 @@ void TrimFullCoverageTags(TextWithTags &parsed) {
 					break;
 				}
 				return QString();
-			} else if (!checkingLink && QStringView(tag) == normalized) {
-				found = true;
-				break;
+			} else if (!checkingLink) {
+				const auto matches = [&] {
+					if (tag == kTagPre) {
+						return IsTagPre(single);
+					}
+					const auto normalized = IsTagPre(single)
+						? QStringView(kTagCode)
+						: single;
+					return QStringView(tag) == normalized;
+				}();
+				if (matches) {
+					found = true;
+					break;
+				}
 			}
 		}
 		if (!found) {
@@ -1065,7 +1073,7 @@ QString AccumulateText(Iterator begin, Iterator end) {
 QTextImageFormat PrepareEmojiFormat(EmojiPtr emoji, int emojiHeight) {
 	const auto factor = style::DevicePixelRatio();
 	const auto size = std::max(emojiHeight * factor, Emoji::GetSizeNormal());
-	const auto width = size + st::emojiPadding * factor * 2;
+	const auto width = Emoji::GetSizeNormal() + st::emojiPadding * factor * 2;
 	auto result = QTextImageFormat();
 	result.setWidth(width / factor);
 	result.setHeight(size / factor);
@@ -1774,6 +1782,11 @@ bool MarkdownEnabledState::enabledForTag(QStringView tag) const {
 		&& (yes->tagsSubset.empty() || yes->tagsSubset.contains(tag));
 }
 
+bool MarkdownEnabledState::typedTagsEnabled() const {
+	const auto yes = std::get_if<MarkdownEnabled>(&data);
+	return yes && yes->typedTags;
+}
+
 InputField::InputField(
 	QWidget *parent,
 	const style::InputField &st,
@@ -2175,7 +2188,7 @@ void InputField::setMarkdownReplacesEnabled(
 	) | rpl::on_next([=](MarkdownEnabledState state) {
 		if (_markdownEnabledState != state) {
 			_markdownEnabledState = state;
-			if (_markdownEnabledState.disabled()) {
+			if (!_markdownEnabledState.typedTagsEnabled()) {
 				_lastMarkdownTags = {};
 			} else {
 				handleContentsChanged();
@@ -3863,7 +3876,9 @@ void InputField::handleContentsChanged() {
 		-1,
 		_lastTextWithTags.tags,
 		tagsChanged,
-		_markdownEnabledState.disabled() ? nullptr : &_lastMarkdownTags);
+		(_markdownEnabledState.typedTagsEnabled()
+			? &_lastMarkdownTags
+			: nullptr));
 
 	//highlightMarkdown();
 	if (_spoilerRangesText.empty() && _spoilerRangesEmoji.empty()) {
@@ -4083,7 +4098,8 @@ TextWithTags InputField::getTextWithTagsPart(int start, int end) const {
 }
 
 TextWithTags InputField::getTextWithAppliedMarkdown() const {
-	if (_markdownEnabledState.disabled() || _lastMarkdownTags.empty()) {
+	if (!_markdownEnabledState.typedTagsEnabled()
+		|| _lastMarkdownTags.empty()) {
 		return getTextWithTags();
 	}
 	const auto &originalText = _lastTextWithTags.text;
@@ -4752,6 +4768,16 @@ void InputField::inputMethodEventInner(QInputMethodEvent *e) {
 	}
 	if (!e->commitString().isEmpty()) {
 		if (Emoji::Find(e->commitString(), nullptr)) {
+			// Finalize the active IME composition in the underlying QTextEdit.
+			// See https://github.com/telegramdesktop/tdesktop/issues/29806
+			auto clear = QInputMethodEvent();
+			_inner->QTextEdit::inputMethodEvent(&clear);
+
+			if (!_lastPreEditText.isEmpty()) {
+				_lastPreEditText = QString();
+				startPlaceholderAnimation();
+			}
+
 			auto mimeData = QMimeData();
 			mimeData.setText(e->commitString());
 			InputField::insertFromMimeDataInner(&mimeData);
@@ -5453,6 +5479,64 @@ bool InputField::isMarkdownTagActive(const QString &tag) const {
 		cursor.charFormat().property(kTagProperty).toString())).contains(tag);
 }
 
+QString InputField::selectionMarkdownTagForToggle(const QString &tag) const {
+	const auto cursor = textCursor();
+	auto from = cursor.selectionStart();
+	auto till = cursor.selectionEnd();
+	if (from >= till) {
+		return QString();
+	}
+	if (document()->characterAt(from) == kHardLine) {
+		++from;
+	}
+	if (document()->characterAt(till - 1) == kHardLine) {
+		--till;
+	}
+	if (from >= till) {
+		return QString();
+	}
+	if (tag != kTagCode) {
+		return tag;
+	}
+	const auto leftForBlock = [&] {
+		if (from <= 0) {
+			return true;
+		}
+		const auto text = getTextWithTagsPart(
+			from - 1,
+			from + 1
+		).text;
+		return text.isEmpty()
+			|| IsNewline(text[0])
+			|| IsNewline(text[text.size() - 1]);
+	}();
+	const auto rightForBlock = [&] {
+		auto cursor = textCursor();
+		cursor.movePosition(QTextCursor::End);
+		if (till >= cursor.position()) {
+			return true;
+		}
+		const auto text = getTextWithTagsPart(
+			till - 1,
+			till + 1
+		).text;
+		return text.isEmpty()
+			|| IsNewline(text[0])
+			|| IsNewline(text[text.size() - 1]);
+	}();
+	const auto singleLine = [&] {
+		for (auto position = from; position != till; ++position) {
+			if (IsNewline(document()->characterAt(position))) {
+				return false;
+			}
+		}
+		return true;
+	};
+	return (leftForBlock && rightForBlock && !singleLine())
+		? kTagPre
+		: kTagCode;
+}
+
 void InputField::toggleCurrentMarkdownTag(const QString &tag) {
 	if (tag.isEmpty()) {
 		return;
@@ -5545,42 +5629,15 @@ void InputField::toggleSelectionMarkdown(const QString &tag) {
 	auto range = TextRange{ from, till };
 	if (tag.isEmpty()) {
 		RemoveDocumentTags(_st, document(), from, till);
-	} else if (HasFullTextTag(getTextWithTagsSelected(), tag)) {
-		removeMarkdownTag(range, tag);
 	} else {
-		const auto leftForBlock = [&] {
-			if (from <= 0) {
-				return true;
-			}
-			const auto text = getTextWithTagsPart(
-				from - 1,
-				from + 1
-			).text;
-			return text.isEmpty()
-				|| IsNewline(text[0])
-				|| IsNewline(text[text.size() - 1]);
-		}();
-		const auto rightForBlock = [&] {
-			auto cursor = QTextCursor(document());
-			cursor.movePosition(QTextCursor::End);
-			if (till >= cursor.position()) {
-				return true;
-			}
-			const auto text = getTextWithTagsPart(
-				till - 1,
-				till + 1
-			).text;
-			return text.isEmpty()
-				|| IsNewline(text[0])
-				|| IsNewline(text[text.size() - 1]);
-		}();
-
-		const auto useTag = (tag != kTagCode)
-			? tag
-			: (leftForBlock && rightForBlock)
-			? kTagPre
-			: kTagCode;
-		range = addMarkdownTag(range, useTag);
+		const auto useTag = selectionMarkdownTagForToggle(tag);
+		if (useTag.isEmpty()) {
+			return;
+		} else if (HasFullTextTag(getTextWithTagsSelected(), useTag)) {
+			removeMarkdownTag(range, useTag);
+		} else {
+			range = addMarkdownTag(range, useTag);
+		}
 	}
 	auto restorePosition = textCursor();
 	restorePosition.setPosition(
