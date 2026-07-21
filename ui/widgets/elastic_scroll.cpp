@@ -1359,8 +1359,11 @@ bool ElasticScroll::eventFilter(QObject *obj, QEvent *e) {
 		if (filterOutTouchEvent(e)) {
 			return true;
 		} else if (e->type() == QEvent::Resize) {
-			const auto weak = Ui::MakeWeak(this);
-			updateState();
+			const auto weak = base::make_weak(this);
+			reanchorOverscroll();
+			if (weak) {
+				updateState();
+			}
 			if (weak) {
 				_innerResizes.fire({});
 			}
@@ -1637,6 +1640,25 @@ void ElasticScroll::applyOverscroll(int overscroll) {
 	updateBarState();
 }
 
+// The scroll value an active Real overscroll is pinned to, from fresh sizes
+std::optional<int> ElasticScroll::lookupOverscrollPinnedEdge() const {
+	if (_overscroll < 0 && _overscrollTypeFrom == OverscrollType::Real) {
+		return 0;
+	} else if (_overscroll > 0 && _overscrollTypeTill == OverscrollType::Real) {
+		return (_vertical ? scrollHeight() : scrollWidth()) - (_vertical ? height() : width());
+	}
+	return std::nullopt;
+}
+
+void ElasticScroll::reanchorOverscroll() {
+	// Keep the widget past the (possibly moved) edge after a resize, or
+	// setState() would read the stale position as a scroll away from the
+	// edge and cancel the bounce.
+	if (const auto edge = lookupOverscrollPinnedEdge()) {
+		applyScrollTo(*edge + _overscroll, false);
+	}
+}
+
 void ElasticScroll::updateBarState() {
 	// Virtual overscroll never moves the inner widget, so it never
 	// reaches the state the bar squishes its thumb from - fold it in,
@@ -1723,6 +1745,7 @@ void ElasticScroll::resizeEvent(QResizeEvent *e) {
 			std::max(0, height() - _barTopInset - _barBottomInset))
 		: QRect(0, height() - _st.width, width(), _st.width));
 	_geometryChanged.fire({});
+	reanchorOverscroll();
 	updateState();
 }
 
@@ -1843,6 +1866,10 @@ void ElasticScroll::scrollTo(int toFrom, int toTill) {
 		if (scTo == curFrom) return;
 	} else {
 		scTo = toFrom;
+	}
+	// Scrolling to the pinned edge value to keep the overscroll displacement
+	if (const auto edge = lookupOverscrollPinnedEdge(); edge == scTo) {
+		scTo += _overscroll;
 	}
 	applyScrollTo(scTo);
 	if (_scroller) {
