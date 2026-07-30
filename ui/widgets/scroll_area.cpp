@@ -20,6 +20,7 @@
 #include <QtWidgets/QScrollerProperties>
 #include <QtWidgets/QApplication>
 #include <QtGui/QGuiApplication>
+#include <QtGui/QScreen>
 #include <QtGui/QWindow>
 #include <private/qabstractanimation_p.h>
 
@@ -122,6 +123,10 @@ void SetupScrollerPhysics(not_null<QScroller*> scroller) {
 	// goes Inactive, drops the press and eats the following moves.
 	// A touchpad has no clicks, so a press should just take over the fling.
 	set(P::MaximumClickThroughVelocity, 0.);
+	// The 5mm dead zone telling a touchscreen tap from a drag is pure loss
+	// here: it re-eats the first 5mm on every re-press and drops sub-5mm
+	// scrolls entirely. Touchpad events are always deliberate scrolls.
+	set(P::DragStartDistance, 0.);
 
 	// QScroller never does the overscroll itself: ScrollArea has none at
 	// all, and ElasticScroll implements its own rubber-band physics fed
@@ -133,6 +138,30 @@ void SetupScrollerPhysics(not_null<QScroller*> scroller) {
 		P::HorizontalOvershootPolicy,
 		QVariant::fromValue(P::OvershootAlwaysOff));
 
+	scroller->setScrollerProperties(props);
+}
+
+void ResendScrollerPrepare(QScroller *scroller) {
+	if (!scroller) {
+		return;
+	}
+	scroller->resendPrepareEvent();
+	if (scroller->state() != QScroller::Scrolling) {
+		return;
+	}
+	// setScrollerProperties() calls recalcScrollingSegments(true), rebuilding
+	// the in-flight segment from the current velocity - but only when the
+	// properties actually change. velocity() is derived from the segment's
+	// timing, not its start/stop positions, so this stays correct even on an
+	// unpatched QScroller. Perturb an input-only metric and restore it.
+	using P = QScrollerProperties;
+	constexpr auto metric = P::MousePressEventDelay;
+	const auto props = scroller->scrollerProperties();
+	auto tweaked = props;
+	tweaked.setScrollMetric(
+		metric,
+		QVariant::fromValue<qreal>(props.scrollMetric(metric).toReal() + 1.));
+	scroller->setScrollerProperties(tweaked);
 	scroller->setScrollerProperties(props);
 }
 
@@ -765,7 +794,7 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 			if (!_wheelDirectionLocked || phase == Qt::NoScrollPhase) {
 				if (std::abs(delta.x()) > std::abs(delta.y())
 					&& _crossAxisWheelProcess
-					&& _crossAxisWheelProcess(delta.toPoint())) {
+					&& _crossAxisWheelProcess(delta.toPoint(), phase)) {
 					return true;
 				}
 			} else if (locked == Qt::Horizontal) {
@@ -774,7 +803,9 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 				// gesture onto this widget, starving the widgets under the
 				// cursor (like swipe handlers) of the ScrollUpdate stream.
 				return _crossAxisWheelProcess
-					&& _crossAxisWheelProcess({ qRound(delta.x()), 0 });
+					&& _crossAxisWheelProcess(
+						{ qRound(delta.x()), 0 },
+						phase);
 			}
 		}
 		if (_scroller) {
@@ -1084,9 +1115,7 @@ void ScrollArea::scrollToX(int toLeft, int toRight) {
 
 void ScrollArea::scrollToY(int toTop, int toBottom) {
 	verticalScrollBar()->setValue(computeScrollToY(toTop, toBottom));
-	if (_scroller) {
-		_scroller->resendPrepareEvent();
-	}
+	ResendScrollerPrepare(_scroller);
 }
 
 void ScrollArea::doSetOwnedWidget(object_ptr<QWidget> w) {
