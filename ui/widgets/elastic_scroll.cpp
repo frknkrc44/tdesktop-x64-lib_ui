@@ -1114,7 +1114,7 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 			}
 			_scroller->handleInput(wasNull
 				? QScroller::InputPress
-				: QScroller::InputMove, _wheelPos, now);
+				: QScroller::InputMove, _wheelPos, e->timestamp());
 		} break;
 		case Qt::ScrollEnd:
 		case Qt::ScrollMomentum: {
@@ -1122,7 +1122,7 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 				_scroller->handleInput(
 					QScroller::InputRelease,
 					_wheelPos,
-					now);
+					e->timestamp());
 				_wheelPos = {};
 			}
 		} break;
