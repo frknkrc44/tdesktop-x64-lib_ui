@@ -869,7 +869,7 @@ bool ElasticScroll::eventHook(QEvent *e) {
 	switch (e->type()) {
 	case QEvent::ScrollPrepare: {
 		QScrollPrepareEvent *se = static_cast<QScrollPrepareEvent *>(e);
-		se->setViewportSize(QSizeF(viewport()->size()));
+		se->setViewportSize(QSizeF(size()));
 		se->setContentPosRange(QRectF(
 			0,
 			0,
