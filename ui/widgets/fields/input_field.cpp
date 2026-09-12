@@ -1644,6 +1644,7 @@ private:
 
 };
 
+#ifndef QT_SPELLCHECK_UNDERLINE_FROM_CHROME
 // The mark under a misspelled word, drawn the way Chrome draws it - a wave on
 // Windows and on Linux, a row of dots on macOS. Kept in the cache of pixmaps
 // as one period of it, so that a run of any length is a filled rectangle.
@@ -1723,6 +1724,7 @@ private:
 
 	return result;
 }
+#endif // !QT_SPELLCHECK_UNDERLINE_FROM_CHROME
 
 void InsertEmojiAtCursor(QTextCursor cursor, EmojiPtr emoji) {
 	const auto currentFormat = cursor.charFormat();
@@ -2326,9 +2328,12 @@ void InputField::paintEventInner(QPaintEvent *e) {
 	_customEmojiRepaintScheduled = false;
 	paintQuotes(e);
 	_inner->QTextEdit::paintEvent(e);
+#ifndef QT_SPELLCHECK_UNDERLINE_FROM_CHROME
 	paintMisspelled(e);
+#endif // !QT_SPELLCHECK_UNDERLINE_FROM_CHROME
 }
 
+#ifndef QT_SPELLCHECK_UNDERLINE_FROM_CHROME
 void InputField::paintMisspelled(QPaintEvent *e) {
 	const auto clip = e->rect();
 	const auto ratio = _inner->viewport()->devicePixelRatioF();
@@ -2415,6 +2420,7 @@ void InputField::paintMisspelled(QPaintEvent *e) {
 		}
 	}
 }
+#endif // !QT_SPELLCHECK_UNDERLINE_FROM_CHROME
 
 void InputField::paintQuotes(QPaintEvent *e) {
 	if (!_blockquoteCache || !_preCache) {
