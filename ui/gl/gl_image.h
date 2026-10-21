@@ -27,6 +27,9 @@
 #endif
 
 namespace Ui::GL {
+
+[[nodiscard]] GLenum TwoComponentTextureFormat();
+
 namespace details {
 
 void GenerateTextures(
