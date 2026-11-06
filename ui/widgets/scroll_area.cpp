@@ -6,6 +6,7 @@
 //
 #include "ui/widgets/scroll_area.h"
 
+#include "ui/widgets/scroll_math.h"
 #include "ui/painter.h"
 #include "ui/qt_weak_factory.h"
 #include "ui/ui_utility.h"
@@ -19,9 +20,8 @@
 #include <QtGui/QWindow>
 
 namespace Ui {
-namespace {
 
-[[nodiscard]] int ComputeScrollTo(
+int ComputeScrollTo(
 		int toFrom,
 		int toTill,
 		int toMin,
@@ -57,8 +57,6 @@ namespace {
 	}
 	return scToFrom;
 }
-
-} // namespace
 
 // flick scroll taken from http://qt-project.org/doc/qt-4.8/demos-embedded-anomaly-src-flickcharm-cpp.html
 
