@@ -295,6 +295,8 @@ PRIVATE
     ui/wrap/slide_wrap.h
     ui/wrap/table_layout.cpp
     ui/wrap/table_layout.h
+    ui/wrap/vertical_blocks.cpp
+    ui/wrap/vertical_blocks.h
     ui/wrap/vertical_layout.cpp
     ui/wrap/vertical_layout.h
     ui/wrap/vertical_layout_reorder.cpp
@@ -352,7 +354,7 @@ PRIVATE
     emoji_suggestions/emoji_suggestions_helper.h
 )
 
-if (QT_VERSION_MAJOR LESS 6 OR DESKTOP_APP_DISABLE_PRIVATE_QT_API)
+if (DESKTOP_APP_DISABLE_PRIVATE_QT_API)
     remove_target_sources(lib_ui ${src_loc}
         ui/widgets/kinetic_scroller.cpp
     )
@@ -400,12 +402,9 @@ PRIVATE
     desktop-app::external_xxhash
 )
 
-if (WIN32 AND (QT_VERSION LESS 6 OR DESKTOP_APP_WIN7_BASELINE))
-    target_link_libraries(lib_ui PRIVATE desktop-app::external_angle)
-endif()
-
-if (WIN32 AND NOT QT_VERSION LESS 6 AND DESKTOP_APP_WIN7_BASELINE)
+if (WIN32 AND DESKTOP_APP_WIN7_BASELINE)
     target_compile_definitions(lib_ui PUBLIC DESKTOP_APP_QT6_ANGLE)
+    target_link_libraries(lib_ui PRIVATE desktop-app::external_angle)
 endif()
 
 target_prepare_qrc(lib_ui)
