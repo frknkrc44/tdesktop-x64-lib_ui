@@ -62,14 +62,11 @@ SlideWrap<RpWidget> *SlideWrap<RpWidget>::toggle(
 		_toggled = shown;
 		if (animate) {
 			_animation.start(
-				[this] { animationStep(); },
+				[this] { animationCallback(); },
 				_toggled ? 0. : 1.,
 				_toggled ? 1. : 0.,
 				_duration,
 				anim::linear);
-			if (_finishedCallback) {
-				_animation.setFinishedCallback(_finishedCallback);
-			}
 		}
 	}
 	if (animate) {
@@ -86,9 +83,6 @@ SlideWrap<RpWidget> *SlideWrap<RpWidget>::toggle(
 SlideWrap<RpWidget> *SlideWrap<RpWidget>::setFinishedCallback(
 		Fn<void()> callback) {
 	_finishedCallback = std::move(callback);
-	if (_animation.animating()) {
-		_animation.setFinishedCallback(_finishedCallback);
-	}
 	return this;
 }
 
@@ -112,6 +106,19 @@ SlideWrap<RpWidget> *SlideWrap<RpWidget>::toggleOn(
 
 void SlideWrap<RpWidget>::setMinimalHeight(int height) {
 	_minimalHeight = height;
+}
+
+void SlideWrap<RpWidget>::animationCallback() {
+	if (!_finishedCallback || _animation.animating()) {
+		animationStep();
+		return;
+	}
+	const auto weak = base::make_weak(this);
+	animationStep();
+	if (weak && _finishedCallback) {
+		const auto onstack = _finishedCallback;
+		onstack();
+	}
 }
 
 void SlideWrap<RpWidget>::animationStep() {
